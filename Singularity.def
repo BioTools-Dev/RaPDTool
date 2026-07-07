@@ -1,0 +1,116 @@
+Bootstrap: docker
+From: ubuntu:22.04
+
+# ============================================================================
+# RaPDTool v2.2.0 - Rapid Profiling and Deconvolution Tool for metagenomes
+# ----------------------------------------------------------------------------
+# Reproducible build recipe. Build with:
+#     apptainer build --fakeroot rapdtool.sif Singularity.def
+#
+# NOTE: neither database is bundled, to keep the image small. Provide them at
+# run time (see README):
+#   - mash reference  ->  -d $RTMASHDB
+#   - FOCUS k-mer db  ->  --focus-db $RTFOCUSDB   (a dir containing db/k6)
+# ============================================================================
+
+%files
+    # pipeline code (paths relative to this .def)
+    bin/rapdtool.py            /usr/local/bin/rapdtool.py
+    bin/rapdtool_split_bins.py /usr/local/bin/rapdtool_split_bins.py
+    bin/rapdtool_results.pl    /usr/local/bin/rapdtool_results.pl
+
+%post
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update && apt-get install -y --no-install-recommends \
+        wget ca-certificates git make gcc bzip2 perl cpanminus procps
+    rm -rf /var/lib/apt/lists/*
+
+    # ---- Miniconda in /opt/miniconda3 -------------------------------------
+    wget -q https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/mc.sh
+    bash /tmp/mc.sh -b -p /opt/miniconda3 && rm /tmp/mc.sh
+    export PATH=/opt/miniconda3/bin:$PATH
+    conda config --add channels defaults
+    conda config --add channels bioconda
+    conda config --add channels conda-forge
+
+    # ---- Core bioinformatics tools (versions as tested) -------------------
+    conda install -y \
+        python=3.12 \
+        focus=1.8 \
+        metabat2=2.15 \
+        mash=2.3 \
+        hmmer=3.4 \
+        prodigal=2.6.3 \
+        entrez-direct=21.6
+    pip install --no-cache-dir miComplete==1.1.1 Binning_refiner==1.4.3
+
+    # FOCUS ships a ~216 MB k-mer database (db/k6) inside its package; remove it
+    # from the image so it can be provided externally via --focus-db/$RTFOCUSDB.
+    find /opt/miniconda3 -type d -path '*/focus_app/db' -exec rm -rf {} + 2>/dev/null || true
+
+    # ---- KronaTools -------------------------------------------------------
+    git clone https://github.com/marbl/Krona /opt/Krona || true
+    if [ -d /opt/Krona/KronaTools ]; then
+        cd /opt/Krona/KronaTools && ./install.pl --prefix /opt/KronaTools || true
+    fi
+
+    # ---- Perl reporting dependency ---------------------------------------
+    cpanm --notest Text::SimpleTable::AutoWidth || true
+
+    chmod +x /usr/local/bin/rapdtool.py /usr/local/bin/rapdtool_split_bins.py \
+             /usr/local/bin/rapdtool_results.pl
+
+    # ---- Slim the image (safe, runtime-only footprint) --------------------
+    conda clean -a -y || true
+    MC=/opt/miniconda3
+    SP=$MC/lib/python3.12/site-packages
+    # conda package cache, installer, C headers/manpages, static libs
+    rm -rf $MC/pkgs /tmp/mc.sh $MC/include $MC/man
+    find $MC -name '*.a' -delete 2>/dev/null || true
+    find $MC -name '*.o' -delete 2>/dev/null || true
+    find $MC -name '__pycache__' -type d -prune -exec rm -rf {} + 2>/dev/null || true
+    # test suites, type stubs and sample data of heavy python pkgs (scipy/numpy/matplotlib/Bio...)
+    find $SP -type d -name tests -prune -exec rm -rf {} + 2>/dev/null || true
+    find $SP/numpy $SP/scipy -name '*.pyi' -delete 2>/dev/null || true
+    rm -rf $SP/matplotlib/mpl-data/sample_data $SP/pip $SP/pip-*.dist-info
+    # HMMER easel source tree, conda docs/man/info/locale
+    rm -rf $MC/share/easel $MC/share/doc $MC/share/man $MC/share/info $MC/share/locale
+    # unused stdlib + tkinter/tcl-tk (matplotlib runs headless via MPLBACKEND=Agg)
+    rm -rf $MC/lib/python3.12/idlelib $MC/lib/python3.12/ensurepip \
+           $MC/lib/python3.12/lib2to3 $MC/lib/python3.12/test \
+           $MC/lib/python3.12/tkinter $MC/lib/python3.12/lib-dynload/_tkinter*.so \
+           $MC/lib/tcl8 $MC/lib/tcl8.6 $MC/lib/tk8.6 $MC/lib/libtcl8.6.so $MC/lib/libtk8.6.so
+    apt-get clean
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/* /usr/share/doc/* /var/log/*
+
+%environment
+    export PATH=/opt/miniconda3/bin:/opt/KronaTools/bin:/usr/local/bin:$PATH
+    export LC_ALL=C
+    export MPLBACKEND=Agg          # headless matplotlib (no Tk/X); lets tkinter/tcl-tk be dropped
+
+%runscript
+    if [ "$#" -eq 0 ]; then
+        exec rapdtool.py --help
+    fi
+    exec rapdtool.py "$@"
+
+%labels
+    Author Karel Estrada and Ayixon Sanchez-Reyes; pipeline maintained by the RaPDTool team
+    Version 2.2.0
+    Description RaPDTool metagenome profiling/binning/classification pipeline
+
+%help
+    RaPDTool v2.2.0
+    Usage inside the container:
+        rapdtool.py -i assembly.fasta --focus-db $RTFOCUSDB [-d $RTMASHDB]
+                    [-r out_dir] [-m full|profile] [-t threads]
+                    [-a coverage.txt] [--no-split-bins]
+        (full mode requires -d/$RTMASHDB; profile mode uses it only if given)
+
+    The databases are NOT included. Provide them via environment variables:
+        export RTMASHDB=/path/to/mash_database.msh
+        export RTFOCUSDB=/path/to/focus     # a directory containing db/k6
+
+# ----------------------------------------------------------------------------
+# A prebuilt image is also attached to the GitHub Releases page; see the README.
+# ----------------------------------------------------------------------------

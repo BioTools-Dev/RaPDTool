@@ -1,0 +1,139 @@
+#!/bin/sh
+# rapdtool - launcher for the RaPDTool Apptainer image.
+#
+# Installs no bioinformatics tools: it downloads (once) and caches the prebuilt,
+# tested SIF image and the databases, then runs the pipeline inside the image.
+#
+# First run downloads everything to the cache dir (override with $RAPDTOOL_CACHE):
+#     ${XDG_CACHE_HOME:-$HOME/.cache}/rapdtool
+#
+# Env overrides (all optional):
+#   RAPDTOOL_CACHE        cache directory
+#   RAPDTOOL_SIF          use this SIF instead of downloading
+#   RTMASHDB              use this mash .msh instead of downloading
+#   RTFOCUSDB             use this FOCUS db dir (containing db/k6) instead of downloading
+#   RAPDTOOL_SIF_URL / RAPDTOOL_MASHDB_URL / RAPDTOOL_FOCUSDB_URL   download sources
+
+set -eu
+
+RAPDTOOL_VERSION=2.2.0
+
+CACHE="${RAPDTOOL_CACHE:-${XDG_CACHE_HOME:-$HOME/.cache}/rapdtool}"
+
+# ---- download sources -------------------------------------------------------
+# TODO(maintainer): replace the two PLACEHOLDER ids with the figshare file ids
+# once the SIF and focus_db.tar.gz are uploaded (or override via env at runtime).
+SIF_URL="${RAPDTOOL_SIF_URL:-https://figshare.com/ndownloader/files/PLACEHOLDER_SIF}"
+MASHDB_URL="${RAPDTOOL_MASHDB_URL:-https://figshare.com/ndownloader/files/30851626}"
+FOCUSDB_URL="${RAPDTOOL_FOCUSDB_URL:-https://figshare.com/ndownloader/files/PLACEHOLDER_FOCUSDB}"
+
+SIF="${RAPDTOOL_SIF:-$CACHE/rapdtool_${RAPDTOOL_VERSION}.sif}"
+MASHDB_DEFAULT="$CACHE/mash_db.msh"
+FOCUSDB_DEFAULT="$CACHE/focus"          # contains db/k6
+
+msg() { printf '[rapdtool] %s\n' "$*" >&2; }
+die() { printf '[rapdtool] error: %s\n' "$*" >&2; exit 1; }
+need_cmd() { command -v "$1" >/dev/null 2>&1 || die "'$1' is required but not found"; }
+
+fetch() {  # fetch URL DEST
+    _url="$1"; _dest="$2"
+    case "$_url" in
+        *PLACEHOLDER*) die "download URL not configured for $(basename "$_dest"). Set the matching RAPDTOOL_*_URL env var, or place the file at: $_dest" ;;
+    esac
+    mkdir -p "$(dirname "$_dest")"
+    msg "downloading $(basename "$_dest") (this happens only once) ..."
+    if command -v curl >/dev/null 2>&1; then
+        curl -fL --retry 3 -o "$_dest.part" "$_url" || die "download failed: $_url"
+    elif command -v wget >/dev/null 2>&1; then
+        wget -O "$_dest.part" "$_url" || die "download failed: $_url"
+    else
+        die "need 'curl' or 'wget' to download files"
+    fi
+    mv "$_dest.part" "$_dest"
+}
+
+ensure_sif() {
+    [ -f "$SIF" ] || fetch "$SIF_URL" "$SIF"
+}
+
+ensure_mashdb() {
+    if [ -n "${RTMASHDB:-}" ] && [ -f "$RTMASHDB" ]; then return 0; fi
+    [ -f "$MASHDB_DEFAULT" ] || fetch "$MASHDB_URL" "$MASHDB_DEFAULT"
+    RTMASHDB="$MASHDB_DEFAULT"
+}
+
+ensure_focusdb() {
+    if [ -n "${RTFOCUSDB:-}" ] && [ -f "$RTFOCUSDB/db/k6" ]; then return 0; fi
+    if [ ! -f "$FOCUSDB_DEFAULT/db/k6" ]; then
+        fetch "$FOCUSDB_URL" "$CACHE/focus_db.tar.gz"
+        msg "extracting FOCUS database ..."
+        tar -xzf "$CACHE/focus_db.tar.gz" -C "$CACHE" || die "could not extract focus_db.tar.gz"
+        rm -f "$CACHE/focus_db.tar.gz"
+        [ -f "$FOCUSDB_DEFAULT/db/k6" ] || die "FOCUS db/k6 not found after extraction"
+    fi
+    RTFOCUSDB="$FOCUSDB_DEFAULT"
+}
+
+add_bind() {  # add parent dir of $1 to APPTAINER_BIND (deduplicated)
+    _p=$(readlink -f "$1" 2>/dev/null) || return 0
+    [ -n "$_p" ] || return 0
+    _d=$(dirname "$_p")
+    [ -d "$_d" ] || return 0
+    case ",${APPTAINER_BIND:-}," in
+        *",$_d,"*) : ;;
+        *) APPTAINER_BIND="${APPTAINER_BIND:+$APPTAINER_BIND,}$_d" ;;
+    esac
+}
+
+usage() {
+    cat <<EOF
+rapdtool $RAPDTOOL_VERSION - runs the RaPDTool pipeline via a prebuilt Apptainer image.
+
+Usage:
+  rapdtool -i INPUT [-d DB] [--focus-db DIR] [-r OUTDIR] [-m full|profile] [-t N] [-a COV] ...
+  rapdtool setup      pre-download the image and databases into the cache
+  rapdtool --where    show cache locations
+  rapdtool --help     this help
+
+On first use the image (~0.5 GB) and databases are downloaded once to:
+  $CACHE
+(override with \$RAPDTOOL_CACHE). Pipeline arguments are passed straight to the
+container. Databases are auto-provided; set \$RTMASHDB / \$RTFOCUSDB to use your own.
+EOF
+}
+
+case "${1:-}" in
+    -h|--help|help|"") usage; exit 0 ;;
+    -V|--version)      echo "rapdtool $RAPDTOOL_VERSION"; exit 0 ;;
+    --where)
+        echo "cache:   $CACHE"
+        echo "sif:     $SIF"
+        echo "mashdb:  ${RTMASHDB:-$MASHDB_DEFAULT}"
+        echo "focusdb: ${RTFOCUSDB:-$FOCUSDB_DEFAULT}"
+        exit 0 ;;
+    setup)
+        need_cmd apptainer
+        ensure_sif; ensure_focusdb; ensure_mashdb
+        msg "setup complete — cache: $CACHE"; exit 0 ;;
+esac
+
+need_cmd apptainer
+ensure_sif
+ensure_focusdb        # required by the image (FOCUS db is not bundled)
+ensure_mashdb         # auto-provided; used by full mode and profile+mash
+
+APPTAINER_BIND="${APPTAINER_BIND:-}"
+add_bind "$RTMASHDB"
+add_bind "$RTFOCUSDB/db"
+_prev=""
+for _arg in "$@"; do
+    case "$_prev" in
+        -i|--input|-d|--database|--focus-db|-a|--coverage|-r|--root) add_bind "$_arg" ;;
+    esac
+    _prev="$_arg"
+done
+export APPTAINER_BIND
+export APPTAINERENV_RTMASHDB="$RTMASHDB"
+export APPTAINERENV_RTFOCUSDB="$RTFOCUSDB"
+
+exec apptainer run "$SIF" "$@"

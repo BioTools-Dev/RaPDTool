@@ -1,108 +1,182 @@
 # RaPDTool: Rapid Profiling and Deconvolution Tool for metagenomes
 
-**You are on version 1.0, we highly recommend the version 2.0 of this tool**
+![RaPDTool pipeline](docs/RaPDTool_pipeline.jpg)
 
-![RaPDTool_pipeline_600ppi](https://user-images.githubusercontent.com/42699236/163838245-93c3d313-ca23-4d2b-9e53-41999bd89e8d.png)
+RaPDTool offers a simple, easy-to-use workflow for microbial-community profiling,
+contig binning and "genomic-distance" exploration by chaining several
+bioinformatic tools into a single pipeline:
 
+1. **Taxonomic profile** from a metagenome assembly (or genomic assembly) with **FOCUS**.
+2. **Binning** of a metagenome into individual genomes/bins with **Metabat2**, refined
+   into a non-redundant set with **Binning_refiner**.
+3. **Completeness / redundancy** and basic MAG statistics with **miComplete**.
+4. **"Taxonomic neighborhood"** of each bin against a curated type-material **Mash** database.
+5. **Interactive visualization** with **Krona**, plus per-species FASTA output.
 
-# RaPDTool offer a simple and easy-to-use tool for microbial communities profiling, contigs binning and "genomic-distance" exploration by connecting a series of bioinformatic tools in a single workflow:
+---
 
-# 1. Generate a taxonomic profile from massive sequencing data (fasta short reads, metagenome assemblies).
+## What's new in v2.2.0
 
-RaPDTool use raw reads or metagenomic assemblies and call FOCUS profiler to report the organisms/abundance present in the metagenome.
+- **One-line conda install** – `conda install -c kjestradag rapdtool` sets everything up;
+  the tested image and databases are fetched and cached automatically on first use.
+- **Robust error handling** – if any tool fails, the pipeline stops immediately with a
+  clear message instead of producing partial/garbage output.
+- **External databases** – the mash reference via `-d`/`$RTMASHDB` and the FOCUS k-mer
+  database via `--focus-db`/`$RTFOCUSDB` (neither is bundled in the image, keeping it slim).
+- **Two run modes** – `full` (default) and `profile` (for genomic assemblies where binning
+  does not apply). Profile runs FOCUS + Krona and, if a mash database is supplied, also
+  classifies the **whole assembly as a single bin** against it, adding a Mash
+  classification table (without binning/completeness columns).
+- **Parallelism** – `-t/--threads` is passed to FOCUS, Metabat2, miComplete and Mash.
+- **Any FASTA extension** accepted (`.fasta`, `.fa`, `.fna`, `.fas`, …, optionally `.gz`)
+  with a quick format check.
+- **Metabat coverage** – pass a depth/coverage file with `-a`.
+- **Per-species bins** – `rapdtool_split_bins.py` writes one FASTA per identified species
+  (runs automatically in full mode; disable with `--no-split-bins`).
+- Migrated from `os.system` string calls to `subprocess` with argument lists (no shell
+  quoting/injection issues); general clean-up and bug fixes.
 
+---
 
-# 2. Deconvolve a metagenome into individual genomes or bins, and refine the set of MAGs.
+## Install
 
-If the input consist on a metagenome assembly, RaPDTool automatically call Metabat2  to aggregate individual genome bins. The bins are subsequently refined with Binning_refiner
-(https://github.com/songweizhi/Binning_refiner) to produce a non-redundant set.
+RaPDTool installs from conda and runs a **prebuilt, tested Apptainer image** — no
+bioinformatics tools are installed on your machine:
 
-# 3. Evaluate the probable "taxonomic neighborhoods" of each resulting genome bin.
+```bash
+conda install -c kjestradag rapdtool
+```
 
-RaPDTool compare each bin against curated taxonomic mash databases like type material genome database (https://figshare.com/ndownloader/files/30851626). Alternatively it can be compared against the database Gtdb-r202 (https://figshare.com/ndownloader/files/30863182). Both databases are offered as representations or sketches that reduce
-storage space and computing time.
+This pulls in [Apptainer](https://apptainer.org/) and the `rapdtool` launcher. On the
+**first run**, the image (~0.5 GB) and the reference databases are downloaded once and
+cached under `~/.cache/rapdtool` (override with `$RAPDTOOL_CACHE`). Pre-fetch everything
+with:
 
-# Dependencies:
+```bash
+rapdtool setup      # optional: download image + databases ahead of time
+rapdtool --where    # show where the image and databases are cached
+```
 
-FOCUS (https://github.com/metageni/FOCUS)
+Requirements: Linux with conda. That's it — Apptainer and the databases are handled
+for you.
 
-Metabat2 (https://bitbucket.org/berkeleylab/metabat/src/master/) (version tested 2:2.15)
+<details>
+<summary>Advanced: build the image yourself / use your own databases</summary>
 
-Binning_refiner (https://github.com/songweizhi/Binning_refiner)
+```bash
+# Build the image from the recipe instead of downloading it
+apptainer build --fakeroot rapdtool.sif Singularity.def
+export RAPDTOOL_SIF=$PWD/rapdtool.sif
 
-Mash  (https://github.com/marbl/Mash)
+# Point at your own databases instead of the auto-downloaded ones
+export RTMASHDB=/path/to/mash_db.msh       # NCBI type material or GTDB r202
+export RTFOCUSDB=/path/to/focus            # a directory containing db/k6
+```
 
-# How to install:
-RaPDTool it is written in python and runs natively by calling the script:
-  rapdtool.py
-  
-  Also you will need the accompanying C scripts
-  
-# Usage: 
-  rapdtool.py [-h] [-i INPUT] [-d DATABASE] [-r ROOT] [-c COMMENT]
+Mash databases: [NCBI type-material prokaryotes](https://figshare.com/ndownloader/files/30851626)
+· [GTDB r202](https://figshare.com/ndownloader/files/30863182).
+</details>
 
-  Focus/Metabat/Binning_refiner/Mash (fmbm) script
+---
 
-  optional arguments:
-    -h, --help            show this help message and exit
-    
-    -i INPUT, --input INPUT
-                        process this file
-                        
-    -d DATABASE, --database DATABASE
-                        use this database
-                        
-    -r ROOT, --root ROOT  fmbm root subdirectory (default: user home)
-    
-    -c COMMENT, --comment COMMENT
-                        "comment for this execution"
-                        
-                        example : ./rapdtool.py -i INPUT.fasta -d DATABASE.msh -r OUTPUT_FOLDER
-                        
-                        Database currently available:
-                        NCBI Prokaryotic type material genomes (https://figshare.com/ndownloader/files/30851626)
-                        Gtdb-r202 (https://figshare.com/ndownloader/files/30863182) 
-                        
-# Output files:
+## Usage
 
-The RaPDTool output is stored in the $HOME directory. The -r option allows to assign a name to the output folder.
-The pipeline results are stored in subdirectories easily identifiable by the user: 
+The `rapdtool` command forwards its arguments to the pipeline (the databases are provided
+automatically):
 
-genomadb: user database 
+```
+rapdtool -i INPUT [-r ROOT] [-m {full,profile}] [-t THREADS] [-a COVERAGE]
+         [--no-split-bins] [--force] [-c COMMENT]
 
-input: input metagenome
+  -i, --input      input FASTA assembly (.fasta/.fa/.fna/.fas, optionally .gz)   [required]
+  -r, --root       output directory (default: ./rapdtool_results)
+  -m, --mode       full (default) or profile (FOCUS + Krona; classifies the whole
+                   assembly with Mash too)
+  -t, --threads    threads for FOCUS/Metabat/miComplete/Mash (default: all cores)
+  -a, --coverage   depth/coverage file passed to Metabat2 (-a)
+      --no-split-bins   disable per-species FASTA output
+      --force      overwrite existing results for the same input
+  -c, --comment    comment recorded in the log
 
-profiles: Focus profiling results 
+  -d, --database   mash .msh to use instead of the cached one   (optional override)
+      --focus-db   FOCUS db directory (containing db/k6) to use  (optional override)
+```
 
-result: Metabat and Binning_refiner result
+### Examples
 
-workf: Summary mash distance calculation
+```bash
+# Full pipeline (metagenome assembly)
+rapdtool -i assembly.fasta -r results
 
-RaPDTool produces individual mash comparisons for every genome bin obtained against the user database (If you select prokaryotic NCBI Type Material DB there will be near to 17,000 records, GTDB contains many more). For this reason, the subdirectory "allresults" contain the ten closest hits from the mash paired comparison for each genome. This simplifies the interpretation of the results by limiting the Mash comparison to the ten closest neighbors to the query, which can be useful in phylogenetics and taxonomy. The user can take this list as the basis for a finer comparison by estimating the Overall genome relatedness index (OGRI) like ANI.
+# Profile a single-genome assembly (FOCUS + whole-assembly Mash classification)
+rapdtool -i genome.fna -m profile -r prof_out
 
-# References:
+# Full pipeline with 16 threads and a precomputed coverage file
+rapdtool -i assembly.fa -t 16 -a depth.txt
+```
 
-Sánchez-Reyes, A.; Fernández-López, M.G. Mash Sketched Reference Dataset for Genome-Based Taxonomy and Comparative Genomics. Preprints 2021, 2021060368 (doi: http://dx.doi.org/10.20944/preprints202106.0368.v1).
+---
 
-Mash: fast genome and metagenome distance estimation using MinHash. Ondov BD, Treangen TJ, Melsted P, Mallonee AB, Bergman NH, Koren S, Phillippy AM. Genome Biol. 2016 Jun 20;17(1):132. doi: 10.1186/s13059-016-0997-x.
+## Output
 
-Silva, G. G. Z., D. A. Cuevas, B. E. Dutilh, and R. A. Edwards, 2014: FOCUS: an alignment-free model to identify organisms in metagenomes using non-negative least squares. PeerJ, 2, e425, doi:10.7717/peerj.425.
+Results are written under the `-r` directory (default `rapdtool_results`):
 
-Song WZ, Thomas T (2017) Binning_refiner: Improving genome bins through the combination of different binning programs. Bioinformatics, 33(12), 1873-1875. 
+- `profilesfmbm/` – FOCUS profiling results
+- `allresultsfmbm/` – ten closest Mash hits per bin
+- `workfmbm/` – intermediate binning / distance data
+- `species_bins/` – one FASTA per identified species (full mode)
+- `rapdtool_confidence.tbl` / `.txt` – merged high-confidence Species/Genus report
+- `rapdtool_krona.html` – interactive Krona visualization
+- `log/logfmbm.txt` – full execution log
 
-Kang, D. D., Li, F., Kirton, E., Thomas, A., Egan, R., An, H., & Wang, Z. (2019). MetaBAT 2: an adaptive binning algorithm for robust and efficient genome reconstruction from metagenome assemblies. PeerJ, 7, e7359. https://doi.org/10.7717/peerj.7359.
+For each bin, RaPDTool reports the ten closest neighbors from the Mash comparison,
+simplifying interpretation and providing a basis for finer OGRI/ANI analysis.
 
-# Acknowledgments
+---
 
-This work was developed in the group of **Dr. Ayixon Sánchez-Reyes**
+## Repository layout
 
-  "Researchers for Mexico" Program-(CONACYT)-Institute of Biotechnology-National Autonomous University of Mexico
-  
-  **Contact personal: ayixon@gmail.com         **Contact institutional: ayixon.sanchez@mail.ibt.unam.mx
-  
-  Teammates: **Dra. Luz Bretón Deval; Dr. Maikel G. Fernández-López**
-  
-We thank Ing. Roberto Peredo for his help in the development of this tool
+```
+bin/            pipeline scripts (rapdtool.py, rapdtool_split_bins.py, rapdtool_results.pl)
+scripts/        rapdtool — host launcher (downloads/caches the image + databases, runs it)
+conda-recipe/   conda package recipe (meta.yaml, build.sh)
+docs/           figures
+Singularity.def container build recipe
+CHANGELOG.md    version history
+```
 
-This work was funded in part by the project CF 2019 265222 (Fondo Institucional para el Desarrollo Científico, Tecnológico y de Innovación FORDECYT-PRONACES CONACYT- México)
+See [CHANGELOG.md](CHANGELOG.md) for the full list of changes.
 
+---
+
+## Dependencies
+
+FOCUS · Metabat2 (2.15) · Binning_refiner (1.4.3) · miComplete (1.1.1) · Mash (2.3) ·
+KronaTools · entrez-direct (used only when reporting Mash hits; requires internet).
+
+## References
+
+- Sánchez-Reyes, A.; Fernández-López, M.G. *Mash Sketched Reference Dataset for
+  Genome-Based Taxonomy and Comparative Genomics*. Preprints 2021, 2021060368.
+- Ondov BD *et al.* *Mash: fast genome and metagenome distance estimation using MinHash.*
+  Genome Biol. 2016;17(1):132.
+- Silva GGZ *et al.* *FOCUS: an alignment-free model to identify organisms in
+  metagenomes using non-negative least squares.* PeerJ. 2014;2:e425.
+- Song WZ, Thomas T. *Binning_refiner.* Bioinformatics. 2017;33(12):1873-1875.
+- Kang DD *et al.* *MetaBAT 2.* PeerJ. 2019;7:e7359.
+
+## Maintainer
+
+This distribution (v2.2.0 — refactored pipeline, external databases, slim image and
+conda packaging) is maintained by **Karel Estrada** ([@kjestradag](https://github.com/kjestradag),
+kjestradag@gmail.com). Issues and pull requests are welcome on the
+[GitHub repository](https://github.com/kjestradag/RaPDTool).
+
+## Acknowledgments
+
+RaPDTool was originally developed in the group of **Dr. Ayixon Sánchez-Reyes** —
+"Researchers for Mexico" Program (CONACYT), Institute of Biotechnology, UNAM.
+Contact: ayixon@gmail.com · ayixon.sanchez@mail.ibt.unam.mx
+Teammates: Dra. Luz Bretón Deval; Dr. Maikel G. Fernández-López.
+We thank Ing. Roberto Peredo for his help in developing this tool.
+Funded in part by project CF 2019 265222 (FORDECYT-PRONACES CONACYT-México).
