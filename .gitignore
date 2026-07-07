@@ -1,0 +1,20 @@
+# Container images and build sandboxes (distributed via Releases, not git)
+*.sif
+*.sif.*
+SIF/
+rapdtool*_build/
+
+# Databases (downloaded separately; see README)
+*.msh
+database/
+db/
+
+# Local dev scratch
+local/
+
+# Python / editor cruft
+__pycache__/
+*.pyc
+*.swp
+*~
+.DS_Store

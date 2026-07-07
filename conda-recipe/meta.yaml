@@ -1,0 +1,36 @@
+package:
+  name: rapdtool
+  version: "2.2.0"
+
+source:
+  path: ..
+
+build:
+  number: 0
+  noarch: generic
+
+requirements:
+  run:
+    - apptainer
+    - curl
+
+test:
+  commands:
+    - command -v rapdtool
+    - rapdtool --version
+
+about:
+  home: https://github.com/kjestradag/RaPDTool
+  license: MIT
+  license_file: LICENSE
+  summary: RaPDTool — metagenome profiling/binning/taxonomic classification via a prebuilt Apptainer image
+  description: |
+    RaPDTool runs a metagenome-assembly pipeline (FOCUS, Metabat2, Binning_refiner,
+    miComplete, Mash, Krona) inside a prebuilt, tested Apptainer image. This package
+    installs only a small launcher plus Apptainer; the ~0.5 GB image and the
+    reference databases are downloaded and cached on first use — no bioinformatics
+    tools are installed on the host.
+
+extra:
+  recipe-maintainers:
+    - kjestradag
