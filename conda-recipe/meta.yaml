@@ -7,7 +7,7 @@ source:
   git_rev: main            # pin to a release tag (e.g. v2.2.0) for reproducible builds
 
 build:
-  number: 0
+  number: 1
   noarch: generic
 
 requirements:
