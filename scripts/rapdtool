@@ -112,15 +112,31 @@ usage() {
 rapdtool $RAPDTOOL_VERSION - runs the RaPDTool pipeline via a prebuilt Apptainer image.
 
 Usage:
-  rapdtool -i INPUT [-d DB] [--focus-db DIR] [-r OUTDIR] [-m full|profile] [-t N] [-a COV] ...
+  rapdtool -i INPUT [-r ROOT] [-m {full,profile}] [-t THREADS] [-a COVERAGE]
+           [--no-split-bins] [--force] [-c COMMENT]
+
+  -i, --input      input FASTA assembly (.fasta/.fa/.fna/.fas, optionally .gz)   [required]
+  -r, --root       output directory (default: ./rapdtool_results)
+  -m, --mode       full (default) or profile (FOCUS + Krona; classifies the whole
+                   assembly with Mash too)
+  -t, --threads    threads for FOCUS/Metabat/miComplete/Mash (default: all cores)
+  -a, --coverage   depth/coverage file passed to Metabat2 (-a)
+      --no-split-bins   disable per-species FASTA output
+      --force      overwrite existing results for the same input
+  -c, --comment    comment recorded in the log
+
+  -d, --database   mash .msh to use instead of the cached one    (optional override)
+      --focus-db   FOCUS db directory (containing db/k6) to use  (optional override)
+
+Launcher commands:
   rapdtool setup      pre-download the image and databases into the cache
   rapdtool --where    show cache locations
   rapdtool --help     this help
 
 On first use the image (~0.5 GB) and databases are downloaded once to:
   $CACHE
-(override with \$RAPDTOOL_CACHE). Pipeline arguments are passed straight to the
-container. Databases are auto-provided; set \$RTMASHDB / \$RTFOCUSDB to use your own.
+(override with \$RAPDTOOL_CACHE). Databases are auto-provided; set \$RTMASHDB / \$RTFOCUSDB
+to use your own.
 EOF
 }
 
