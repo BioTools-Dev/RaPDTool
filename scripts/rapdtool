@@ -178,4 +178,4 @@ export APPTAINER_BIND
 export APPTAINERENV_RTMASHDB="$RTMASHDB"
 export APPTAINERENV_RTFOCUSDB="$RTFOCUSDB"
 
-exec apptainer run "$SIF" "$@"
+exec apptainer --quiet run "$SIF" "$@"    # --quiet hides benign INFO (e.g. fuse2fs); keeps warnings/errors
