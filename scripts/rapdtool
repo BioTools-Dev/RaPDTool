@@ -109,7 +109,11 @@ add_bind() {  # add parent dir of $1 to APPTAINER_BIND (deduplicated)
 
 usage() {
     cat <<EOF
-rapdtool $RAPDTOOL_VERSION - runs the RaPDTool pipeline via a prebuilt Apptainer image.
+==============================================
+(Ra)pid (P)rofiling and (D)econvolution (Tool)
+    Ayixon Sanchez-Reyes and Karel Estrada
+           RaPDTool - Version $RAPDTOOL_VERSION
+==============================================
 
 Usage:
   rapdtool -i INPUT [-r ROOT] [-m {full,profile}] [-t THREADS] [-a COVERAGE]
