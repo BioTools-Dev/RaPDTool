@@ -20,7 +20,7 @@ bioinformatic tools into a single pipeline:
 
 ## What's new in v2.2.0
 
-- **One-line conda install** – `conda install -c kjestradag rapdtool` sets everything up;
+- **One-line conda install** – `conda install -c kjestradag -c conda-forge rapdtool` sets everything up;
   the tested image and databases are fetched and cached automatically on first use.
 - **Robust error handling** – if any tool fails, the pipeline stops immediately with a
   clear message instead of producing partial/garbage output.
@@ -47,10 +47,11 @@ RaPDTool installs from conda and runs a **prebuilt, tested Apptainer image** —
 bioinformatics tools are installed on your machine:
 
 ```bash
-conda install -c kjestradag rapdtool
+conda install -c kjestradag -c conda-forge rapdtool
 ```
 
-This pulls in [Apptainer](https://apptainer.org/) and the `rapdtool` launcher. On the
+This pulls in [Apptainer](https://apptainer.org/) (from conda-forge) and the `rapdtool`
+launcher. On the
 **first run**, the image (~0.5 GB) and the reference databases are downloaded once and
 cached under `~/.cache/rapdtool` (override with `$RAPDTOOL_CACHE`). Pre-fetch everything
 with:
