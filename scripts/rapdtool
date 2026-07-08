@@ -20,12 +20,21 @@ RAPDTOOL_VERSION=2.2.0
 
 CACHE="${RAPDTOOL_CACHE:-${XDG_CACHE_HOME:-$HOME/.cache}/rapdtool}"
 
-# ---- download sources -------------------------------------------------------
-# TODO(maintainer): replace the two PLACEHOLDER ids with the figshare file ids
-# once the SIF and focus_db.tar.gz are uploaded (or override via env at runtime).
-SIF_URL="${RAPDTOOL_SIF_URL:-https://figshare.com/ndownloader/files/PLACEHOLDER_SIF}"
-MASHDB_URL="${RAPDTOOL_MASHDB_URL:-https://figshare.com/ndownloader/files/30851626}"
-FOCUSDB_URL="${RAPDTOOL_FOCUSDB_URL:-https://figshare.com/ndownloader/files/PLACEHOLDER_FOCUSDB}"
+# ---- download sources (figshare) --------------------------------------------
+# Stable figshare ARTICLE ids (from the DOI 10.6084/m9.figshare.<id>). The exact
+# per-file download URL is resolved at run time from the figshare API, so
+# uploading a new version of an article keeps working without editing anything.
+#   SIF     -> https://doi.org/10.6084/m9.figshare.21375609
+#   mash DB -> https://doi.org/10.6084/m9.figshare.21379491
+#   FOCUS DB-> https://doi.org/10.6084/m9.figshare.21395619
+SIF_ARTICLE="${RAPDTOOL_SIF_ARTICLE:-21375609}"
+MASHDB_ARTICLE="${RAPDTOOL_MASHDB_ARTICLE:-21379491}"
+FOCUSDB_ARTICLE="${RAPDTOOL_FOCUSDB_ARTICLE:-21395619}"
+
+# Optional hard overrides of the direct download URL (skip API resolution).
+SIF_URL="${RAPDTOOL_SIF_URL:-}"
+MASHDB_URL="${RAPDTOOL_MASHDB_URL:-}"
+FOCUSDB_URL="${RAPDTOOL_FOCUSDB_URL:-}"
 
 SIF="${RAPDTOOL_SIF:-$CACHE/rapdtool_${RAPDTOOL_VERSION}.sif}"
 MASHDB_DEFAULT="$CACHE/mash_db.msh"
@@ -35,11 +44,24 @@ msg() { printf '[rapdtool] %s\n' "$*" >&2; }
 die() { printf '[rapdtool] error: %s\n' "$*" >&2; exit 1; }
 need_cmd() { command -v "$1" >/dev/null 2>&1 || die "'$1' is required but not found"; }
 
+# resolve the direct download URL of an article's file from the figshare API
+figshare_file_url() {  # figshare_file_url ARTICLE_ID
+    curl -fsSL "https://api.figshare.com/v2/articles/$1" 2>/dev/null \
+        | grep -o '"download_url"[[:space:]]*:[[:space:]]*"[^"]*"' \
+        | head -n1 \
+        | sed 's/.*"\(https[^"]*\)".*/\1/'
+}
+
+resolve_url() {  # resolve_url OVERRIDE_URL ARTICLE_ID LABEL  -> prints URL
+    if [ -n "$1" ]; then printf '%s' "$1"; return 0; fi
+    _u=$(figshare_file_url "$2")
+    [ -n "$_u" ] || die "could not resolve $3 download URL from figshare article $2 (network?)"
+    printf '%s' "$_u"
+}
+
 fetch() {  # fetch URL DEST
     _url="$1"; _dest="$2"
-    case "$_url" in
-        *PLACEHOLDER*) die "download URL not configured for $(basename "$_dest"). Set the matching RAPDTOOL_*_URL env var, or place the file at: $_dest" ;;
-    esac
+    [ -n "$_url" ] || die "no download URL for $(basename "$_dest")"
     mkdir -p "$(dirname "$_dest")"
     msg "downloading $(basename "$_dest") (this happens only once) ..."
     if command -v curl >/dev/null 2>&1; then
@@ -53,19 +75,19 @@ fetch() {  # fetch URL DEST
 }
 
 ensure_sif() {
-    [ -f "$SIF" ] || fetch "$SIF_URL" "$SIF"
+    [ -f "$SIF" ] || fetch "$(resolve_url "$SIF_URL" "$SIF_ARTICLE" SIF)" "$SIF"
 }
 
 ensure_mashdb() {
     if [ -n "${RTMASHDB:-}" ] && [ -f "$RTMASHDB" ]; then return 0; fi
-    [ -f "$MASHDB_DEFAULT" ] || fetch "$MASHDB_URL" "$MASHDB_DEFAULT"
+    [ -f "$MASHDB_DEFAULT" ] || fetch "$(resolve_url "$MASHDB_URL" "$MASHDB_ARTICLE" 'mash database')" "$MASHDB_DEFAULT"
     RTMASHDB="$MASHDB_DEFAULT"
 }
 
 ensure_focusdb() {
     if [ -n "${RTFOCUSDB:-}" ] && [ -f "$RTFOCUSDB/db/k6" ]; then return 0; fi
     if [ ! -f "$FOCUSDB_DEFAULT/db/k6" ]; then
-        fetch "$FOCUSDB_URL" "$CACHE/focus_db.tar.gz"
+        fetch "$(resolve_url "$FOCUSDB_URL" "$FOCUSDB_ARTICLE" 'FOCUS database')" "$CACHE/focus_db.tar.gz"
         msg "extracting FOCUS database ..."
         tar -xzf "$CACHE/focus_db.tar.gz" -C "$CACHE" || die "could not extract focus_db.tar.gz"
         rm -f "$CACHE/focus_db.tar.gz"
