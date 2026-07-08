@@ -170,8 +170,9 @@ KronaTools · entrez-direct (used only when reporting Mash hits; requires intern
 
 ## Maintainer
 
-RaPDTool is developed and maintained by **Dr. Karel Estrada** ([@kjestradag](https://github.com/kjestradag),
-kjestradag@gmail.com) and **Dr. Ayixon Sánchez-Reyes** (.ayixon@gmail.com · ayixon.sanchez@mail.ibt.unam.mx.) Researchers for Mexico" Program (CONACYT), Institute of Biotechnology, UNAM.
+RaPDTool was co-developed by **Dr. Ayixon Sánchez-Reyes** and **Dr. Karel Estrada** and is maintained by Dr. Estrada.
+**Dr. Karel Estrada** ([@kjestradag](https://github.com/kjestradag),kjestradag@gmail.com) Unidad de Secuenciación Masiva y Bioinformática. UNAM
+**Dr. Ayixon Sánchez-Reyes** (.ayixon@gmail.com · ayixon.sanchez@mail.ibt.unam.mx.) Researchers for Mexico Program (CONACYT), Institute of Biotechnology, UNAM.
 Issues and pull requests are welcome on the [GitHub repository](https://github.com/kjestradag/RaPDTool).
 
 ## Acknowledgments
