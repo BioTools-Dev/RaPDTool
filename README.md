@@ -79,8 +79,11 @@ export RTMASHDB=/path/to/mash_db.msh       # NCBI type material or GTDB r202
 export RTFOCUSDB=/path/to/focus            # a directory containing db/k6
 ```
 
-Mash databases: [NCBI type-material prokaryotes](https://figshare.com/ndownloader/files/30851626)
-· [GTDB r202](https://figshare.com/ndownloader/files/30863182).
+The image and databases are hosted on figshare and fetched automatically:
+[image](https://doi.org/10.6084/m9.figshare.21375609) ·
+[mash DB](https://doi.org/10.6084/m9.figshare.21379491) ·
+[FOCUS DB](https://doi.org/10.6084/m9.figshare.21395619).
+To use a different mash database, set `$RTMASHDB` to any `.msh` (e.g. GTDB r202).
 </details>
 
 ---
