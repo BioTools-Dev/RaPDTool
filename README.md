@@ -180,7 +180,6 @@ kjestradag@gmail.com). Issues and pull requests are welcome on the
 RaPDTool was originally developed in the group of **Dr. Ayixon Sánchez-Reyes** —
 "Researchers for Mexico" Program (CONACYT), Institute of Biotechnology, UNAM.
 Contact: ayixon@gmail.com · ayixon.sanchez@mail.ibt.unam.mx
-Teammates: Dra. Luz Bretón Deval; Dr. Maikel G. Fernández-López.
 We thank Ing. Roberto Peredo for his help in developing this tool.
 Funded in part by project CF 2019 265222 (FORDECYT-PRONACES CONACYT-México).
   ### RaPDTool up-to-date version continues in https://github.com/kjestradag/RaPDTool
@@ -216,86 +215,6 @@ In the version 2.0 of this pipeline, the refined set of bins are automatically p
 RaPDTool compare each bin against curated taxonomic mash databases like type material genome database from NCBI (NCBI_type_material.msh), the Genome Taxonomy Database (GTDBr202.msh) and a database that we built to enrich the one that comes by default with Focus, using almost entirely, the type material database. these databases are offered as representations or sketches that reduce storage space and computing time.
 </p>
 
-## Dependencies:
-
-> **FOCUS** (https://github.com/metageni/FOCUS)
-
-> **Metabat2** (https://bitbucket.org/berkeleylab/metabat/src/master/) (version tested 2:2.15)
-
-> **Binning_refiner** (https://github.com/songweizhi/Binning_refiner)
-
-> **Prodigal** (https://github.com/hyattpd/Prodigal)
-
-> **HMMER** (http://hmmer.org/)
-
-> **miComplete** (https://github.com/EricHugo/miComplete)
-
-> **Mash**  (https://github.com/marbl/Mash)
-
-> **Krona** (https://github.com/marbl/Krona/wiki)
-
-> RaPDTool **preconfigured** database [DB Mash format](https://figshare.com/ndownloader/files/37939296)
-
-**Perl Modules**
-
->  Getopt::Std
-
->  Text::SimpleTable::AutoWidth
-
-## How to install:
-
-### Option 1 (recommended)
-
-<p align="justify">
-RaPDTool pipeline it is written in Python and Perl and used several C scripts. 
-For greater convenience/ease of installing rapdtools, we use the Singularity container platform and build an image with the complete environment (scripts, dependencies and databases) needed to run RapdTool.
-</p>
-
-You just need to have "Singularity" or install it with:
-
-    $ conda install -c conda-forge singularity 
-
-and **download** the Singularity image [rapdtool](https://figshare.com/ndownloader/files/37939014)
-
-## Usage: 
-  
-> $ rapdtool <input.fasta> [output_dir]
-
-    the input file should be a metagenome assembly
-  
-  optional:
-
-    output_dir_name (default: rapdtool_results)
-  
-  notes:
- 
-    1- You need to put "rapdtool" in your path, otherwise you must give the whole path so that it can be found.
-
-    2- The input fasta must exist in your $HOME, otherwise you need to set the environment variable SINGULARITY_BIND
-    to bind paths where your sequences are located
-    ex: export SINGULARITY_BIND="../path/for/the/input/fasta"
-
-### Option 2
-
-Make sure you have all **dependencies** installed and the **DATABASE** downloaded.
-You also need to download and have in your path all the "bin" scripts.
-
-RaPDTool runs natively by calling the script:
-  rapdtool_local.py
-  
-## Usage: 
-
-> $ rapdtool_local.py -i <input.fasta> -d database.msh [-r output_dir]
-    
-    *no argument for this help
-    
-  the input file should be a metagenome assembly
-
-  optional:
-    
-    output_dir_name (default: rapdtool_results)
-
-    example : ./rapdtool.py -i INPUT.fasta -d DATABASE.msh -r OUTPUT_FOLDER
 
 ## Output directories and files
 
@@ -435,7 +354,7 @@ This work was developed in the group of **Dr. Ayixon Sánchez-Reyes**
   
   **Contact personal: ayixon@gmail.com         **Contact institutional: ayixon.sanchez@mail.ibt.unam.mx
   
-  Teammates: **M.C. Karel Johan Estrada Guerra (developer); Dra. Luz Bretón Deval; Dr. Maikel G. Fernández-López**
+  Teammates: **M.C. Karel Johan Estrada Guerra (developer)**
   
 We thank Ing. Roberto Peredo for his help in the development of this tool
 
