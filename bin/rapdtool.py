@@ -21,8 +21,10 @@ import time
 
 VERSION = '2.3.0'
 
-# accepted FASTA extensions (optionally followed by .gz)
+# accepted input extensions (optionally followed by .gz)
 FASTA_EXTS = ('.fasta', '.fa', '.fna', '.fas', '.ffn', '.frn')
+FASTQ_EXTS = ('.fastq', '.fq')          # raw reads, accepted in screen mode only
+INPUT_EXTS = FASTA_EXTS + FASTQ_EXTS
 
 
 def eprint(*args):
@@ -101,12 +103,12 @@ class Pipeline:
 
     @classmethod
     def blunt_name(cls, filename):
-        """Strip a known FASTA extension (and optional .gz); replace '.' with '_'."""
+        """Strip a known FASTA/FASTQ extension (and optional .gz); '.' -> '_'."""
         name = filename
         if name.lower().endswith('.gz'):
             name = name[:-3]
         low = name.lower()
-        for ext in FASTA_EXTS:
+        for ext in INPUT_EXTS:
             if low.endswith(ext):
                 name = name[:-len(ext)]
                 break
@@ -116,16 +118,22 @@ class Pipeline:
                 name = name[:rmp]
         return name.replace('.', '_')
 
-    def is_fasta(self, path):
+    def _first_char(self, path):
         try:
             with self.open_maybe_gz(path) as fh:
                 for line in fh:
-                    if line.strip() == '':
-                        continue
-                    return line.lstrip().startswith('>')
+                    s = line.strip()
+                    if s:
+                        return s[0]
         except (OSError, gzip.BadGzipFile):
-            return False
-        return False
+            return None
+        return None
+
+    def is_fasta(self, path):
+        return self._first_char(path) == '>'
+
+    def is_fastq(self, path):
+        return self._first_char(path) == '@'
 
     # ------------------------------------------------------------------ setup
     def set_root(self, root_option):
@@ -205,8 +213,12 @@ class Pipeline:
         opt = self.opts.input
         if not os.path.isfile(opt):
             self.fail('input', 'input file not found: ' + opt)
-        if not self.is_fasta(opt):
-            self.fail('input', 'not a FASTA file (first record must start with ">"): ' + opt)
+        if self.mode == 'screen':
+            if not (self.is_fasta(opt) or self.is_fastq(opt)):
+                self.fail('input', 'not a FASTA/FASTQ file (must start with ">" or "@"): ' + opt)
+        elif not self.is_fasta(opt):
+            self.fail('input', 'not a FASTA assembly (must start with ">"). Raw reads '
+                      '(FASTQ) are supported only in screen mode (-m screen): ' + opt)
         filename = os.path.basename(opt)
         target = self.paths['input'] + filename
         if os.path.abspath(opt) != target:
@@ -521,7 +533,8 @@ def pick_options(argv=None):
         description='RaPDTool v%s - Focus/Metabat/Binning_refiner/miComplete/Mash '
                     'metagenome pipeline' % VERSION)
     parser.add_argument('-i', '--input', required=True,
-                        help='input FASTA assembly (.fasta/.fa/.fna/.fas, optionally .gz)')
+                        help='input FASTA assembly (.fasta/.fa/.fna/.fas, optionally .gz); '
+                             'FASTQ reads (.fastq/.fq) are also accepted in screen mode')
     parser.add_argument('-d', '--database', default=os.environ.get('RTMASHDB'),
                         help='mash database (.msh). Default: $RTMASHDB. Not needed in profile mode.')
     parser.add_argument('--focus-db', dest='focus_db', default=os.environ.get('RTFOCUSDB'),

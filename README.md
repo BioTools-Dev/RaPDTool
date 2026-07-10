@@ -21,7 +21,8 @@ bioinformatic tools into a single pipeline:
 ## What's new
 
 - **Screen mode (v2.3.0)** – `-m screen` runs FOCUS + `mash screen` to report which
-  reference genomes are present in a metagenome **without binning** (fast "what's there").
+  reference genomes are present in a metagenome **without binning** (fast "what's there"),
+  accepting either a FASTA assembly or **raw FASTQ reads**.
 - **One-line conda install** – `conda create -n rapdtool -c conda-forge -c kjestradag rapdtool`
   sets everything up; the tested image and databases are fetched and cached automatically on first use.
 - **Robust error handling** – if any tool fails, the pipeline stops immediately with a
@@ -100,11 +101,12 @@ rapdtool -i INPUT [-r ROOT] [-m {full,profile,screen}] [-t THREADS] [-a COVERAGE
          [--screen-identity F] [--no-split-bins] [--force] [-c COMMENT]
 
   -i, --input      input FASTA assembly (.fasta/.fa/.fna/.fas, optionally .gz)   [required]
+                   (screen mode also accepts FASTQ reads: .fastq/.fq[.gz])
   -r, --root       output directory (default: ./rapdtool_results)
   -m, --mode       full (default): binning + per-bin taxonomic classification (MAGs);
                    profile: single-genome assembly (FOCUS + whole-assembly Mash);
                    screen: FOCUS + mash-screen containment — which reference genomes
-                   are present in a metagenome, without binning
+                   are present in a metagenome (FASTA or raw FASTQ reads), no binning
   -t, --threads    threads for FOCUS/Metabat/miComplete/Mash (default: all cores)
   -a, --coverage   depth/coverage file passed to Metabat2 (-a)
       --screen-identity  min mash-screen identity in screen mode (default: 0.95)
