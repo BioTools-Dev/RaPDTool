@@ -5,10 +5,9 @@
 
 ### [!WARNING]
  <div align="center">
-2
 <h1>
 <span style="color:red;">
-RaPDTool up-to-date version continues in https://github.com/kjestradag/RaPDTool
+RaPDTool up-to-date version (v2.2) continues in https://github.com/kjestradag/RaPDTool
 </span>
 </h1>
 </div>
