@@ -197,8 +197,9 @@ Funded in part by project CF 2019 265222 (FORDECYT-PRONACES CONACYT-México).
 
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------------
+###########################################################################################################
 <div align="justify">
-<h2>RaPDTool</h2> A simple and easy-to-use tool for microbial communities profiling, contigs binning and "genomic-distance" exploration by connecting a series of bioinformatic tools in a single workflow:
+<h2>RaPDTool</h2> Old version general notes
 </div>
 
 ### 1. Generate a taxonomic profile from massive sequencing data (the input file should be a metagenome assembly).
