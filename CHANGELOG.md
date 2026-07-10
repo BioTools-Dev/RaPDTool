@@ -2,6 +2,14 @@
 
 All notable changes to RaPDTool are documented here.
 
+## [2.3.0] — 2026-07-10
+
+### Added
+- **Screen mode** (`-m screen`) — FOCUS + `mash screen` (containment) to identify the
+  reference genomes present in a metagenome **without binning**. Reports each detected
+  genome (species/taxID via esearch) with its identity and shared-hashes, for hits at or
+  above `--screen-identity` (default 0.95). Full and profile modes are unchanged.
+
 ## [2.2.0] — 2026-07-07
 
 Major robustness, usability and packaging overhaul.

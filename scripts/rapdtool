@@ -16,7 +16,7 @@
 
 set -eu
 
-RAPDTOOL_VERSION=2.2.0
+RAPDTOOL_VERSION=2.3.0
 
 CACHE="${RAPDTOOL_CACHE:-${XDG_CACHE_HOME:-$HOME/.cache}/rapdtool}"
 
@@ -116,15 +116,17 @@ usage() {
 ==============================================
 
 Usage:
-  rapdtool -i INPUT [-r ROOT] [-m {full,profile}] [-t THREADS] [-a COVERAGE]
-           [--no-split-bins] [--force] [-c COMMENT]
+  rapdtool -i INPUT [-r ROOT] [-m {full,profile,screen}] [-t THREADS] [-a COVERAGE]
+           [--screen-identity F] [--no-split-bins] [--force] [-c COMMENT]
 
   -i, --input      input FASTA assembly (.fasta/.fa/.fna/.fas, optionally .gz)   [required]
   -r, --root       output directory (default: ./rapdtool_results)
-  -m, --mode       full (default) or profile (FOCUS + Krona; classifies the whole
-                   assembly with Mash too)
+  -m, --mode       full (default): binning + per-bin classification;
+                   profile: single genome (FOCUS + whole-assembly Mash);
+                   screen: FOCUS + mash-screen containment (what's there, no binning)
   -t, --threads    threads for FOCUS/Metabat/miComplete/Mash (default: all cores)
   -a, --coverage   depth/coverage file passed to Metabat2 (-a)
+      --screen-identity   min mash-screen identity in screen mode (default: 0.95)
       --no-split-bins   disable per-species FASTA output
       --force      overwrite existing results for the same input
   -c, --comment    comment recorded in the log
