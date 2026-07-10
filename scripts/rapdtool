@@ -116,12 +116,12 @@ usage() {
 ==============================================
 
 Usage:
-  rapdtool -i INPUT [-r ROOT] [-m {full,profile,screen}] [-t THREADS] [-a COVERAGE]
+  rapdtool -i INPUT [-o OUTPUT] [-m {full,profile,screen}] [-t THREADS] [-a COVERAGE]
            [--screen-identity F] [--no-split-bins] [--force] [-c COMMENT]
 
   -i, --input      input FASTA assembly (.fasta/.fa/.fna/.fas, optionally .gz)   [required]
                    (screen mode also accepts FASTQ reads: .fastq/.fq[.gz])
-  -r, --root       output directory (default: ./rapdtool_results)
+  -o, --output     output directory (default: ./rapdtool_results)
   -m, --mode       full (default): binning + per-bin classification;
                    profile: single genome (FOCUS + whole-assembly Mash);
                    screen: FOCUS + mash-screen containment (what's there, no binning)
@@ -173,7 +173,7 @@ add_bind "$RTFOCUSDB/db"
 _prev=""
 for _arg in "$@"; do
     case "$_prev" in
-        -i|--input|-d|--database|--focus-db|-a|--coverage|-r|--root) add_bind "$_arg" ;;
+        -i|--input|-d|--database|--focus-db|-a|--coverage|-o|--output) add_bind "$_arg" ;;
     esac
     _prev="$_arg"
 done

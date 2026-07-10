@@ -13,6 +13,10 @@ All notable changes to RaPDTool are documented here.
   (`.fastq`/`.fq`, optionally `.gz`) in addition to FASTA assemblies. Full and profile
   still require a FASTA assembly.
 
+### Changed
+- Output directory flag renamed from `-r/--root` to `-o/--output` (more conventional
+  in bioinformatics CLIs).
+
 ## [2.2.0] — 2026-07-07
 
 Major robustness, usability and packaging overhaul.

@@ -103,7 +103,7 @@ From: ubuntu:22.04
     RaPDTool v2.3.0
     Usage inside the container:
         rapdtool.py -i assembly.fasta --focus-db $RTFOCUSDB [-d $RTMASHDB]
-                    [-r out_dir] [-m full|profile|screen] [-t threads]
+                    [-o out_dir] [-m full|profile|screen] [-t threads]
                     [-a coverage.txt] [--no-split-bins]
         (full/screen need -d/$RTMASHDB; profile uses it only if given)
 

@@ -481,7 +481,7 @@ class Pipeline:
 
     # ------------------------------------------------------------------- main
     def run_pipeline(self):
-        root_msg = self.set_root(self.opts.root)
+        root_msg = self.set_root(self.opts.output)
         paths_msg = self.set_paths()   # sets self.log_file, so log from here on
         self.log('\n* Starting execution ' + time.strftime('%Y-%m-%d %H:%M:%S') +
                  ' (mode: %s)' % self.mode + self.comment)
@@ -539,7 +539,7 @@ def pick_options(argv=None):
                         help='mash database (.msh). Default: $RTMASHDB. Not needed in profile mode.')
     parser.add_argument('--focus-db', dest='focus_db', default=os.environ.get('RTFOCUSDB'),
                         help='FOCUS database directory (must contain db/k6). Default: $RTFOCUSDB')
-    parser.add_argument('-r', '--root', help='output directory (default: ./rapdtool_results)')
+    parser.add_argument('-o', '--output', help='output directory (default: ./rapdtool_results)')
     parser.add_argument('-c', '--comment', help='comment recorded in the log')
     parser.add_argument('-m', '--mode', choices=('full', 'profile', 'screen'), default='full',
                         help='full pipeline, profile (single genome), or screen '
