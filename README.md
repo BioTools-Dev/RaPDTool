@@ -57,9 +57,10 @@ conda activate rapdtool
 
 This pulls in [Apptainer](https://apptainer.org/) (from conda-forge) and the `rapdtool`
 launcher. On the
-**first run**, the image (~0.5 GB) and the reference databases are downloaded once and
-cached under `~/.cache/rapdtool` (override with `$RAPDTOOL_CACHE`). Pre-fetch everything
-with:
+**first run**, the image (~0.5 GB) and the reference databases are downloaded and cached
+under `~/.cache/rapdtool` (override with `$RAPDTOOL_CACHE`). Each run checks figshare and
+re-downloads an asset when a newer version is published (skip with
+`$RAPDTOOL_NO_UPDATE_CHECK=1`; force with `rapdtool update`). Pre-fetch everything with:
 
 ```bash
 rapdtool setup      # optional: download image + databases ahead of time

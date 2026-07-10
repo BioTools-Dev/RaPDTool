@@ -12,6 +12,11 @@ All notable changes to RaPDTool are documented here.
 - **FASTQ input in screen mode** — screen accepts raw sequencing reads
   (`.fastq`/`.fq`, optionally `.gz`) in addition to FASTA assemblies. Full and profile
   still require a FASTA assembly.
+- **Auto-refresh of cached assets** — the launcher records the figshare file version of
+  each cached asset (image, mash DB, FOCUS DB) and re-downloads it automatically when a
+  newer version is published, so updating figshare is enough (no filename/version change
+  needed). Skip the per-run check with `$RAPDTOOL_NO_UPDATE_CHECK=1`; force a refresh with
+  `rapdtool update`.
 
 ### Changed
 - Output directory flag renamed from `-r/--root` to `-o/--output` (more conventional

@@ -52,18 +52,11 @@ figshare_file_url() {  # figshare_file_url ARTICLE_ID
         | sed 's/.*"\(https[^"]*\)".*/\1/'
 }
 
-resolve_url() {  # resolve_url OVERRIDE_URL ARTICLE_ID LABEL  -> prints URL
-    if [ -n "$1" ]; then printf '%s' "$1"; return 0; fi
-    _u=$(figshare_file_url "$2")
-    [ -n "$_u" ] || die "could not resolve $3 download URL from figshare article $2 (network?)"
-    printf '%s' "$_u"
-}
-
 fetch() {  # fetch URL DEST
     _url="$1"; _dest="$2"
     [ -n "$_url" ] || die "no download URL for $(basename "$_dest")"
     mkdir -p "$(dirname "$_dest")"
-    msg "downloading $(basename "$_dest") (this happens only once) ..."
+    msg "downloading $(basename "$_dest") ..."
     if command -v curl >/dev/null 2>&1; then
         curl -fL --retry 3 -o "$_dest.part" "$_url" || die "download failed: $_url"
     elif command -v wget >/dev/null 2>&1; then
@@ -74,24 +67,55 @@ fetch() {  # fetch URL DEST
     mv "$_dest.part" "$_dest"
 }
 
+# Decide whether DEST must be (re)downloaded and set $SRC to the URL to fetch.
+# The figshare per-file id (embedded in the download URL) changes whenever a new
+# version of the article is uploaded, so a mismatch with the recorded sidecar
+# (.src) triggers a refresh. Offline / API-down keeps the cached copy.
+# Returns 0 = fetch, 1 = keep cache.
+plan_fetch() {  # plan_fetch DEST SIDECAR OVERRIDE_URL ARTICLE
+    _dest="$1"; _side="$2"; _ovr="$3"; _art="$4"; SRC=""
+    # fast path: cache present and the per-run update check is disabled
+    if [ -e "$_dest" ] && [ -n "${RAPDTOOL_NO_UPDATE_CHECK:-}" ]; then return 1; fi
+    if [ -n "$_ovr" ]; then _cur="$_ovr"; else _cur=$(figshare_file_url "$_art"); fi
+    SRC="$_cur"
+    if [ ! -e "$_dest" ]; then
+        [ -n "$SRC" ] || die "could not resolve download URL (figshare article $_art; network?)"
+        return 0
+    fi
+    [ -n "$_cur" ] || return 1                                  # offline -> keep cache
+    [ -f "$_side" ] && [ "$(cat "$_side" 2>/dev/null)" = "$_cur" ] && return 1
+    msg "a newer version is available; refreshing $(basename "$_dest") ..."
+    return 0
+}
+
 ensure_sif() {
-    [ -f "$SIF" ] || fetch "$(resolve_url "$SIF_URL" "$SIF_ARTICLE" SIF)" "$SIF"
+    [ -n "${RAPDTOOL_SIF:-}" ] && [ -f "$SIF" ] && return 0   # user-provided image, don't manage
+    if plan_fetch "$SIF" "$SIF.src" "$SIF_URL" "$SIF_ARTICLE"; then
+        fetch "$SRC" "$SIF"
+        printf '%s' "$SRC" > "$SIF.src"
+    fi
 }
 
 ensure_mashdb() {
     if [ -n "${RTMASHDB:-}" ] && [ -f "$RTMASHDB" ]; then return 0; fi
-    [ -f "$MASHDB_DEFAULT" ] || fetch "$(resolve_url "$MASHDB_URL" "$MASHDB_ARTICLE" 'mash database')" "$MASHDB_DEFAULT"
+    if plan_fetch "$MASHDB_DEFAULT" "$MASHDB_DEFAULT.src" "$MASHDB_URL" "$MASHDB_ARTICLE"; then
+        fetch "$SRC" "$MASHDB_DEFAULT"
+        printf '%s' "$SRC" > "$MASHDB_DEFAULT.src"
+    fi
     RTMASHDB="$MASHDB_DEFAULT"
 }
 
 ensure_focusdb() {
     if [ -n "${RTFOCUSDB:-}" ] && [ -f "$RTFOCUSDB/db/k6" ]; then return 0; fi
-    if [ ! -f "$FOCUSDB_DEFAULT/db/k6" ]; then
-        fetch "$(resolve_url "$FOCUSDB_URL" "$FOCUSDB_ARTICLE" 'FOCUS database')" "$CACHE/focus_db.tar.gz"
+    if plan_fetch "$FOCUSDB_DEFAULT/db/k6" "$FOCUSDB_DEFAULT/.src" "$FOCUSDB_URL" "$FOCUSDB_ARTICLE"; then
+        rm -rf "$FOCUSDB_DEFAULT"
+        fetch "$SRC" "$CACHE/focus_db.tar.gz"
         msg "extracting FOCUS database ..."
+        mkdir -p "$CACHE"
         tar -xzf "$CACHE/focus_db.tar.gz" -C "$CACHE" || die "could not extract focus_db.tar.gz"
         rm -f "$CACHE/focus_db.tar.gz"
         [ -f "$FOCUSDB_DEFAULT/db/k6" ] || die "FOCUS db/k6 not found after extraction"
+        printf '%s' "$SRC" > "$FOCUSDB_DEFAULT/.src"
     fi
     RTFOCUSDB="$FOCUSDB_DEFAULT"
 }
@@ -137,13 +161,15 @@ Usage:
 
 Launcher commands:
   rapdtool setup      pre-download the image and databases into the cache
+  rapdtool update     force re-download of the image and databases
   rapdtool --where    show cache locations
   rapdtool --help     this help
 
-On first use the image (~0.5 GB) and databases are downloaded once to:
+On first use the image (~0.5 GB) and databases are downloaded to:
   $CACHE
-(override with \$RAPDTOOL_CACHE). Databases are auto-provided; set \$RTMASHDB / \$RTFOCUSDB
-to use your own.
+(override with \$RAPDTOOL_CACHE). Each run checks figshare and re-downloads an asset
+when a newer version is published (set \$RAPDTOOL_NO_UPDATE_CHECK=1 to skip the check).
+Databases are auto-provided; set \$RTMASHDB / \$RTFOCUSDB to use your own.
 EOF
 }
 
@@ -160,6 +186,14 @@ case "${1:-}" in
         need_cmd apptainer
         ensure_sif; ensure_focusdb; ensure_mashdb
         msg "setup complete — cache: $CACHE"; exit 0 ;;
+    update)
+        need_cmd apptainer
+        # only clear cache-managed assets, never user-provided overrides
+        [ -n "${RAPDTOOL_SIF:-}" ] || rm -f "$SIF" "$SIF.src"
+        [ -n "${RTMASHDB:-}" ]     || rm -f "$MASHDB_DEFAULT" "$MASHDB_DEFAULT.src"
+        [ -n "${RTFOCUSDB:-}" ]    || rm -rf "$FOCUSDB_DEFAULT"
+        ensure_sif; ensure_focusdb; ensure_mashdb
+        msg "update complete — cache: $CACHE"; exit 0 ;;
 esac
 
 need_cmd apptainer
