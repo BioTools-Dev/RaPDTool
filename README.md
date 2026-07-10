@@ -97,12 +97,12 @@ The `rapdtool` command forwards its arguments to the pipeline (the databases are
 automatically):
 
 ```
-rapdtool -i INPUT [-r ROOT] [-m {full,profile,screen}] [-t THREADS] [-a COVERAGE]
+rapdtool -i INPUT [-o OUTPUT] [-m {full,profile,screen}] [-t THREADS] [-a COVERAGE]
          [--screen-identity F] [--no-split-bins] [--force] [-c COMMENT]
 
   -i, --input      input FASTA assembly (.fasta/.fa/.fna/.fas, optionally .gz)   [required]
                    (screen mode also accepts FASTQ reads: .fastq/.fq[.gz])
-  -r, --root       output directory (default: ./rapdtool_results)
+  -o, --output     output directory (default: ./rapdtool_results)
   -m, --mode       full (default): binning + per-bin taxonomic classification (MAGs);
                    profile: single-genome assembly (FOCUS + whole-assembly Mash);
                    screen: FOCUS + mash-screen containment — which reference genomes
@@ -122,13 +122,13 @@ rapdtool -i INPUT [-r ROOT] [-m {full,profile,screen}] [-t THREADS] [-a COVERAGE
 
 ```bash
 # Full pipeline (metagenome assembly)
-rapdtool -i assembly.fasta -r results
+rapdtool -i assembly.fasta -o results
 
 # Screen: which reference genomes are present in a metagenome (no binning)
-rapdtool -i assembly.fasta -m screen -r screen_out
+rapdtool -i assembly.fasta -m screen -o screen_out
 
 # Profile a single-genome assembly (FOCUS + whole-assembly Mash classification)
-rapdtool -i genome.fna -m profile -r prof_out
+rapdtool -i genome.fna -m profile -o prof_out
 
 # Full pipeline with 16 threads and a precomputed coverage file
 rapdtool -i assembly.fa -t 16 -a depth.txt
@@ -138,7 +138,7 @@ rapdtool -i assembly.fa -t 16 -a depth.txt
 
 ## Output
 
-Results are written under the `-r` directory (default `rapdtool_results`):
+Results are written under the `-o` directory (default `rapdtool_results`):
 
 - `profilesfmbm/` – FOCUS profiling results
 - `allresultsfmbm/` – ten closest Mash hits per bin
