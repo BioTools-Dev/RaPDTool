@@ -29,10 +29,10 @@ bioinformatic tools into a single pipeline:
   clear message instead of producing partial/garbage output.
 - **External databases** – the mash reference via `-d`/`$RTMASHDB` and the FOCUS k-mer
   database via `--focus-db`/`$RTFOCUSDB` (neither is bundled in the image, keeping it slim).
-- **Two run modes** – `full` (default) and `profile` (for genomic assemblies where binning
-  does not apply). Profile runs FOCUS + Krona and, if a mash database is supplied, also
-  classifies the **whole assembly as a single bin** against it, adding a Mash
-  classification table (without binning/completeness columns).
+- **Three run modes** – `full` (default: binning + per-bin classification), `profile`
+  (single-genome assembly: FOCUS + whole-assembly Mash), and `screen` (FOCUS +
+  `mash screen` containment to report what's present in a metagenome, no binning;
+  accepts FASTA or raw FASTQ reads).
 - **Parallelism** – `-t/--threads` is passed to FOCUS, Metabat2, miComplete and Mash.
 - **Any FASTA extension** accepted (`.fasta`, `.fa`, `.fna`, `.fas`, …, optionally `.gz`)
   with a quick format check.
