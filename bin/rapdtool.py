@@ -19,7 +19,7 @@ import subprocess
 import sys
 import time
 
-VERSION = '2.2.0'
+VERSION = '2.3.0'
 
 # accepted FASTA extensions (optionally followed by .gz)
 FASTA_EXTS = ('.fasta', '.fa', '.fna', '.fas', '.ffn', '.frn')
@@ -158,10 +158,10 @@ class Pipeline:
         p['outmash'] = work + 'outmash/'
         p['micompleteres'] = r + 'miCompleteRes/'
 
-        if self.mode == 'profile':
-            needed = ['log', 'input', 'profiles', 'processed', 'logfocus', 'work']
-        else:
+        if self.mode == 'full':
             needed = list(p.keys())
+        else:
+            needed = ['log', 'input', 'profiles', 'processed', 'logfocus', 'work']
 
         self.log_file = p['log'] + 'logfmbm.txt'
         for key in needed:
@@ -215,7 +215,7 @@ class Pipeline:
 
         collide = [self.paths['profiles'] + bluntname + '/',
                    self.paths['allresults'] + bluntname + '/']
-        if self.mode != 'profile':
+        if self.mode == 'full':
             collide += [self.paths['binmetabat'] + bluntname + '/',
                         self.paths['inbinningref'] + bluntname + '/',
                         self.paths['outbinningref'] + bluntname + '_Binning_refiner_outputs/',
@@ -240,7 +240,7 @@ class Pipeline:
         self.focus_log = p['logfocus'] + self.filename + '.txt'
         self.result_path = p['allresults'] + b + '/'
         self.mash_out = p['outmash'] + b + '/'
-        if self.mode != 'profile':
+        if self.mode == 'full':
             self.metabat_bin = p['binmetabat'] + b + '/'
             self.metabat_log = p['logmetabat'] + self.filename + '.txt'
             self.binref_in = p['inbinningref'] + b + '/'
@@ -257,7 +257,7 @@ class Pipeline:
             self.micomplete_out = p['outmicomplete'] + 'miCompleteOut_' + b + '.tab'
 
         dirs = [self.focus_out, self.result_path]
-        if self.mode != 'profile':
+        if self.mode == 'full':
             dirs += [self.metabat_bin, self.binref_in, self.binref_in_one,
                      self.binref_in_two, self.mash_out]
         for d in dirs:
@@ -363,6 +363,36 @@ class Pipeline:
         self.log('mash - %d taxonomic match report(s)' % len(reports))
         self._extract_min_dist(reports)
 
+    def step_mash_screen(self, index, total):
+        """Screen mode: identify reference genomes contained in the whole assembly
+        with 'mash screen' (containment) -- no binning. Hits with identity >=
+        --screen-identity are written to mashscreen_hits.txt for the report merger."""
+        print('Running Mash screen.. [%d/%d]' % (index, total))
+        self.log('MASH screen (reference-genome containment)')
+        os.makedirs(self.mash_out, exist_ok=True)
+        raw = self.mash_out + self.bluntname + '.screen.tab'
+        self.run('mash-screen',
+                 ['mash', 'screen', '-w', '-p', self.threads, self.database, self.input_file],
+                 stdout_path=raw, allow_fail=True)
+        cutoff = self.opts.screen_identity
+        hits = []
+        if os.path.isfile(raw):
+            for line in open(raw):
+                f = line.rstrip('\n').split('\t')
+                if len(f) < 5:
+                    continue
+                try:
+                    ident = float(f[0])
+                except ValueError:
+                    continue
+                if ident >= cutoff:
+                    hits.append((ident, f[1], f[4]))   # identity, shared-hashes, ref name
+            hits.sort(reverse=True)
+        with open(self.root + 'mashscreen_hits.txt', 'w') as fh:
+            for ident, shared, ref in hits:
+                fh.write('%.4f\t%s\t%s\n' % (ident, shared, ref))
+        self.log('mash screen - %d reference genome(s) >= %.2f identity' % (len(hits), cutoff))
+
     def _extract_min_dist(self, reports, want=10):
         for mtm in reports:
             rows = []
@@ -406,7 +436,7 @@ class Pipeline:
         print('Generating Krona visualization.. [%d/%d]' % (index + 1, total))
         self.log('Generating Krona visualization..')
         self.run('krona', ['ktImportText', 'forkrona.txt'], cwd=self.root, allow_fail=True)
-        for junk in ('profilesfmbm.txt', 'forkrona.txt'):
+        for junk in ('profilesfmbm.txt', 'forkrona.txt', 'mashscreen_hits.txt'):
             jp = self.root + junk
             if os.path.isfile(jp):
                 os.remove(jp)
@@ -460,6 +490,13 @@ class Pipeline:
             shutil.move(self.input_file, self.paths['processed'] + self.filename)
             self.merge_and_krona(step, total)
             self.cleanup()
+        elif self.mode == 'screen':
+            total = 4
+            self.step_focus(1, total)
+            self.step_mash_screen(2, total)
+            shutil.move(self.input_file, self.paths['processed'] + self.filename)
+            self.merge_and_krona(3, total)
+            self.cleanup()
         else:
             total = 8 if self.opts.split_bins else 7
             self.step_focus(1, total)
@@ -491,8 +528,11 @@ def pick_options(argv=None):
                         help='FOCUS database directory (must contain db/k6). Default: $RTFOCUSDB')
     parser.add_argument('-r', '--root', help='output directory (default: ./rapdtool_results)')
     parser.add_argument('-c', '--comment', help='comment recorded in the log')
-    parser.add_argument('-m', '--mode', choices=('full', 'profile'), default='full',
-                        help='full pipeline or profile-only (default: full)')
+    parser.add_argument('-m', '--mode', choices=('full', 'profile', 'screen'), default='full',
+                        help='full pipeline, profile (single genome), or screen '
+                             '(FOCUS + mash-screen containment, no binning) (default: full)')
+    parser.add_argument('--screen-identity', dest='screen_identity', type=float, default=0.95,
+                        help='min mash-screen identity to report a genome in screen mode (default: 0.95)')
     parser.add_argument('-t', '--threads', type=int, default=(os.cpu_count() or 4),
                         help='threads for FOCUS/Metabat/miComplete/Mash (default: all cores)')
     parser.add_argument('-a', '--coverage', help='depth/coverage file passed to Metabat2 (-a)')

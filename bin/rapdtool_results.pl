@@ -110,6 +110,26 @@ if( %species ){
 }
 print OUT $s->draw if $species;
 
+# mash screen section (screen mode) - reads mashscreen_hits.txt if present
+if( -s "mashscreen_hits.txt" ){
+	open SC, "mashscreen_hits.txt";
+	my $sc = Text::SimpleTable::AutoWidth->new( max_width => 5000, captions => [qw/ Species taxID Identity Shared-hashes /] );
+	print OUT"\nReference genomes detected (mash screen):\n\n";
+	print OUT3"\n# Reference genomes detected (mash screen):\n\n";
+	print OUT3"Species\ttaxID\tIdentity\tShared-hashes\n";
+	while(<SC>){
+		chomp;
+		my($ident,$shared,$ref)= split("\t");
+		my $acc= ($ref =~ /(GC[AF]_\d+\.\d+)/) ? $1 : $ref;
+		my($org,$taxid)= getseq($acc);
+		print OUT2"$acc\t$org\n";
+		print OUT3"$org\t$taxid\t$ident\t$shared\n";
+		$sc->row($org,$taxid,$ident,$shared);
+	}
+	close SC;
+	print OUT $sc->draw;
+}
+
 my $f = Text::SimpleTable::AutoWidth->new( max_width => 100, captions => [qw/ Species relative_abundance /] );
 print OUT"\n\nFOCUS profile\nBe cautious at species taxonomic level:\n";
 print OUT3"\n# FOCUS profile (be cautious at species taxonomic level):\n\n";
