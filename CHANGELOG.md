@@ -9,6 +9,9 @@ All notable changes to RaPDTool are documented here.
   reference genomes present in a metagenome **without binning**. Reports each detected
   genome (species/taxID via esearch) with its identity and shared-hashes, for hits at or
   above `--screen-identity` (default 0.95). Full and profile modes are unchanged.
+- **FASTQ input in screen mode** — screen accepts raw sequencing reads
+  (`.fastq`/`.fq`, optionally `.gz`) in addition to FASTA assemblies. Full and profile
+  still require a FASTA assembly.
 
 ## [2.2.0] — 2026-07-07
 

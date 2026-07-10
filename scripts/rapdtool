@@ -120,6 +120,7 @@ Usage:
            [--screen-identity F] [--no-split-bins] [--force] [-c COMMENT]
 
   -i, --input      input FASTA assembly (.fasta/.fa/.fna/.fas, optionally .gz)   [required]
+                   (screen mode also accepts FASTQ reads: .fastq/.fq[.gz])
   -r, --root       output directory (default: ./rapdtool_results)
   -m, --mode       full (default): binning + per-bin classification;
                    profile: single genome (FOCUS + whole-assembly Mash);
