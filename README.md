@@ -3,7 +3,7 @@
   <h1>${{\color{red}Ra}pid\ {\color{red}P}rofiling\ and\ {\color{red}D}econvolution\ {\color{red}Tool}}\ for\ metagenomes$</h1>
 </div>
 
-![RaPDTool pipeline](docs/RaPDTool_pipeline.png)
+![RaPDTool pipeline](docs/RaPDTool_pipeline_newedit.png)
 
 RaPDTool offers a simple, easy-to-use workflow for microbial-community profiling,
 contig binning and "genomic-distance" exploration by chaining several
