@@ -58,10 +58,23 @@ From: ubuntu:22.04
     fi
 
     # ---- Perl reporting module into the env's perl -----------------------
-    $ENV/bin/cpanm --notest Text::SimpleTable::AutoWidth || true
+    # Not on conda; installed from CPAN via cpanm (needs 'make', installed above).
+    # Version pinned for reproducibility. NO '|| true' here — a failure must abort.
+    $ENV/bin/cpanm --notest Text::SimpleTable::AutoWidth@0.09
 
     chmod +x /usr/local/bin/rapdtool.py /usr/local/bin/rapdtool_split_bins.py \
              /usr/local/bin/rapdtool_results.pl
+
+    # ---- Self-check: FAIL the build if any essential component is missing --
+    # (the install steps above tolerate transient issues; this gate ensures we never
+    #  ship a "successful" but broken image — missing Krona / Perl module / focus_app)
+    export PATH=/opt/KronaTools/bin:$PATH   # KronaTools installs here (mirrors runtime %environment)
+    command -v ktImportText >/dev/null || { echo 'BUILD ERROR: KronaTools (ktImportText) missing'; exit 1; }
+    $ENV/bin/perl -MText::SimpleTable::AutoWidth -e1 || { echo 'BUILD ERROR: Perl module Text::SimpleTable::AutoWidth missing'; exit 1; }
+    $ENV/bin/python -c 'import focus_app.focus' || { echo 'BUILD ERROR: focus_app import failed (pkg_resources?)'; exit 1; }
+    for t in focus metabat2 mash miComplete Binning_refiner esearch; do
+        command -v "$t" >/dev/null || { echo "BUILD ERROR: $t missing"; exit 1; }
+    done
 
     # ---- Slim the image (safe, runtime-only footprint) --------------------
     conda clean -a -y || true
