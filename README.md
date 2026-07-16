@@ -1,27 +1,8 @@
 <div align="center">
   <h1>RaPDTool</h1>
+  $\huge \textcolor{red}{\textsf{R}}\textsf{a}\textcolor{red}{\textsf{P}}\textcolor{red}{\textsf{D}}\textcolor{red}{\textsf{T}}\textsf{ool}$
   <h1>${{\color{red}Ra}pid\ {\color{red}P}rofiling\ and\ {\color{red}D}econvolution\ {\color{red}Tool}}\ for\ metagenomes$</h1>
 </div>
-
-<div align="center">
-
-# RaPDTool
-
-$\large \textcolor{red}{\textsf{Ra}}\textsf{pid } \textcolor{red}{\textsf{P}}\textsf{rofiling and } \textcolor{red}{\textsf{D}}\textsf{econvolution } \textcolor{red}{\textsf{Tool}}\textsf{ for metagenomes}$
-
-</div>
-
-<div align="center">
-
-# RaPDTool
-
-$\huge \textcolor{red}{\textsf{R}}\textsf{a}\textcolor{red}{\textsf{P}}\textcolor{red}{\textsf{D}}\textcolor{red}{\textsf{T}}\textsf{ool}$
-
-### ${\color{red}Ra}$pid ${\color{red}P}$rofiling and ${\color{red}D}$econvolution ${\color{red}Tool}$ for metagenomes
-
-</div>
-
-
 
 ![RaPDTool pipeline](docs/RaPDTool_pipeline_newedit.png)
 
