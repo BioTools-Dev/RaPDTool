@@ -71,13 +71,31 @@ Requirements: Linux with conda. That's it — Apptainer and the databases are ha
 for you.
 
 <details>
-<summary>Advanced: build the image yourself / use your own databases</summary>
+<summary>Advanced: build the image yourself</summary>
+
+The recipe (`Singularity.def`) rebuilds the whole image from scratch — it downloads and
+installs all tools; nothing but the recipe and the `bin/` scripts is needed. Run it from
+the cloned repository root (so the `%files` paths resolve):
 
 ```bash
-# Build the image from the recipe instead of downloading it
+git clone https://github.com/kjestradag/RaPDTool.git
+cd RaPDTool
 apptainer build --fakeroot rapdtool.sif Singularity.def
 export RAPDTOOL_SIF=$PWD/rapdtool.sif
+```
 
+Requirements: `apptainer` with working `--fakeroot` (or root), an internet connection, and
+~5–6 GB of free disk during the build (final image ~0.5 GB). The build takes several
+minutes and self-checks its essential components, so it fails loudly rather than producing
+a broken image. Because it resolves current package versions, it is not bit-identical to
+the published image — verify a run afterwards.
+
+</details>
+
+<details>
+<summary>Advanced: use your own databases</summary>
+
+```bash
 # Point at your own databases instead of the auto-downloaded ones
 export RTMASHDB=/path/to/mash_db.msh       # NCBI type material or GTDB r202
 export RTFOCUSDB=/path/to/focus            # a directory containing db/k6
