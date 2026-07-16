@@ -450,7 +450,8 @@ class Pipeline:
         self.run('rapdtool_results', merge_argv, cwd=self.root)
         print('Generating Krona visualization.. [%d/%d]' % (index + 1, total))
         self.log('Generating Krona visualization..')
-        self.run('krona', ['ktImportText', 'forkrona.txt'], cwd=self.root, allow_fail=True)
+        self.run('krona', ['ktImportText', 'forkrona.txt', '-o', 'rapdtool_krona.html'],
+                 cwd=self.root, allow_fail=True)
         for junk in ('profilesfmbm.txt', 'forkrona.txt', 'mashscreen_hits.txt'):
             jp = self.root + junk
             if os.path.isfile(jp):

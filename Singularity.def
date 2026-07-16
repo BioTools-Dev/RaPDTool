@@ -22,44 +22,43 @@ From: ubuntu:22.04
 %post
     export DEBIAN_FRONTEND=noninteractive
     apt-get update && apt-get install -y --no-install-recommends \
-        wget ca-certificates git make gcc bzip2 perl cpanminus procps
+        wget ca-certificates git make gcc bzip2 procps
     rm -rf /var/lib/apt/lists/*
 
     # ---- Miniforge in /opt/miniconda3 -------------------------------------
-    # Miniforge (community conda-forge installer): its base env is clean — no Anaconda
-    # 'defaults' channel and no conda-anaconda-tos package. This avoids both the defaults
-    # channel ToS gate and the base-env python 3.14 solver conflict that ships with the
-    # latest Miniconda.
+    # Miniforge (community conda-forge installer): its base env has no Anaconda
+    # 'defaults' channel and no conda-anaconda-tos package (avoids the defaults ToS
+    # gate and the base-env python 3.14 conflict of the latest Miniconda).
     wget -q https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh -O /tmp/mc.sh
     bash /tmp/mc.sh -b -p /opt/miniconda3 && rm /tmp/mc.sh
     export PATH=/opt/miniconda3/bin:$PATH
-    conda config --add channels bioconda
-    conda config --add channels conda-forge
-    conda config --set channel_priority strict
 
-    # ---- Core bioinformatics tools (versions as tested) -------------------
-    conda install -y --override-channels -c conda-forge -c bioconda \
-        python=3.12 \
-        focus=1.8 \
-        metabat2=2.15 \
-        mash=2.3 \
-        hmmer=3.4 \
-        prodigal=2.6.3 \
-        entrez-direct=21.6
-    pip install --no-cache-dir miComplete==1.1.1 Binning_refiner==1.4.3
+    # ---- Tools in a DEDICATED env (isolated from base conda/mamba lib pins) ----
+    # The 2024-era tool builds fail to install into base because Miniforge's base
+    # mamba pins modern libcurl/xz/zlib that conflict with metabat2=2.15. A fresh
+    # env lets the solver pick the known-good combination.
+    # NOTE: setuptools<81 keeps pkg_resources, which focus_app imports (removed in 81+).
+    conda create -y -n rt --override-channels -c conda-forge -c bioconda \
+        python=3.12 'setuptools<81' focus=1.8 metabat2=2.15 mash=2.3 hmmer=3.4 \
+        prodigal=2.6.3 entrez-direct=21.6 perl-app-cpanminus
+    ENV=/opt/miniconda3/envs/rt
+    export PATH=$ENV/bin:$PATH
+
+    # python tools into the env
+    $ENV/bin/pip install --no-cache-dir miComplete==1.1.1 Binning_refiner==1.4.3
 
     # FOCUS ships a ~216 MB k-mer database (db/k6) inside its package; remove it
-    # from the image so it can be provided externally via --focus-db/$RTFOCUSDB.
-    find /opt/miniconda3 -type d -path '*/focus_app/db' -exec rm -rf {} + 2>/dev/null || true
+    # so it can be provided externally via --focus-db/$RTFOCUSDB.
+    find $ENV -type d -path '*/focus_app/db' -exec rm -rf {} + 2>/dev/null || true
 
-    # ---- KronaTools -------------------------------------------------------
+    # ---- KronaTools (text import; no taxonomy DB needed) -------------------
     git clone https://github.com/marbl/Krona /opt/Krona || true
     if [ -d /opt/Krona/KronaTools ]; then
         cd /opt/Krona/KronaTools && ./install.pl --prefix /opt/KronaTools || true
     fi
 
-    # ---- Perl reporting dependency ---------------------------------------
-    cpanm --notest Text::SimpleTable::AutoWidth || true
+    # ---- Perl reporting module into the env's perl -----------------------
+    $ENV/bin/cpanm --notest Text::SimpleTable::AutoWidth || true
 
     chmod +x /usr/local/bin/rapdtool.py /usr/local/bin/rapdtool_split_bins.py \
              /usr/local/bin/rapdtool_results.pl
@@ -67,28 +66,27 @@ From: ubuntu:22.04
     # ---- Slim the image (safe, runtime-only footprint) --------------------
     conda clean -a -y || true
     MC=/opt/miniconda3
-    SP=$MC/lib/python3.12/site-packages
-    # conda package cache, installer, C headers/manpages, static libs
-    rm -rf $MC/pkgs /tmp/mc.sh $MC/include $MC/man
-    find $MC -name '*.a' -delete 2>/dev/null || true
-    find $MC -name '*.o' -delete 2>/dev/null || true
+    SP=$ENV/lib/python3.12/site-packages
+    rm -rf $MC/pkgs /tmp/mc.sh
+    find $ENV -name '*.a' -delete 2>/dev/null || true
+    find $ENV -name '*.o' -delete 2>/dev/null || true
     find $MC -name '__pycache__' -type d -prune -exec rm -rf {} + 2>/dev/null || true
     # test suites, type stubs and sample data of heavy python pkgs (scipy/numpy/matplotlib/Bio...)
     find $SP -type d -name tests -prune -exec rm -rf {} + 2>/dev/null || true
     find $SP/numpy $SP/scipy -name '*.pyi' -delete 2>/dev/null || true
     rm -rf $SP/matplotlib/mpl-data/sample_data $SP/pip $SP/pip-*.dist-info
     # HMMER easel source tree, conda docs/man/info/locale
-    rm -rf $MC/share/easel $MC/share/doc $MC/share/man $MC/share/info $MC/share/locale
+    rm -rf $ENV/share/easel $ENV/share/doc $ENV/share/man $MC/share/doc $MC/share/man $MC/share/info
     # unused stdlib + tkinter/tcl-tk (matplotlib runs headless via MPLBACKEND=Agg)
-    rm -rf $MC/lib/python3.12/idlelib $MC/lib/python3.12/ensurepip \
-           $MC/lib/python3.12/lib2to3 $MC/lib/python3.12/test \
-           $MC/lib/python3.12/tkinter $MC/lib/python3.12/lib-dynload/_tkinter*.so \
-           $MC/lib/tcl8 $MC/lib/tcl8.6 $MC/lib/tk8.6 $MC/lib/libtcl8.6.so $MC/lib/libtk8.6.so
+    rm -rf $ENV/lib/python3.12/idlelib $ENV/lib/python3.12/ensurepip \
+           $ENV/lib/python3.12/lib2to3 $ENV/lib/python3.12/test \
+           $ENV/lib/python3.12/tkinter $ENV/lib/python3.12/lib-dynload/_tkinter*.so \
+           $ENV/lib/tcl8 $ENV/lib/tcl8.6 $ENV/lib/tk8.6 $ENV/lib/libtcl8.6.so $ENV/lib/libtk8.6.so
     apt-get clean
     rm -rf /var/lib/apt/lists/* /var/cache/apt/* /usr/share/doc/* /var/log/*
 
 %environment
-    export PATH=/opt/miniconda3/bin:/opt/KronaTools/bin:/usr/local/bin:$PATH
+    export PATH=/opt/miniconda3/envs/rt/bin:/opt/KronaTools/bin:/usr/local/bin:$PATH
     export LC_ALL=C
     export MPLBACKEND=Agg          # headless matplotlib (no Tk/X); lets tkinter/tcl-tk be dropped
 
