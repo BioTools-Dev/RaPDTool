@@ -29,12 +29,14 @@ From: ubuntu:22.04
     wget -q https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/mc.sh
     bash /tmp/mc.sh -b -p /opt/miniconda3 && rm /tmp/mc.sh
     export PATH=/opt/miniconda3/bin:$PATH
-    conda config --add channels defaults
+    # use only conda-forge + bioconda (avoids Anaconda 'defaults' channel ToS gate)
+    conda config --remove channels defaults 2>/dev/null || true
     conda config --add channels bioconda
     conda config --add channels conda-forge
+    conda config --set channel_priority strict
 
     # ---- Core bioinformatics tools (versions as tested) -------------------
-    conda install -y \
+    conda install -y --override-channels -c conda-forge -c bioconda \
         python=3.12 \
         focus=1.8 \
         metabat2=2.15 \
