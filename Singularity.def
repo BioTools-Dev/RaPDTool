@@ -25,12 +25,14 @@ From: ubuntu:22.04
         wget ca-certificates git make gcc bzip2 perl cpanminus procps
     rm -rf /var/lib/apt/lists/*
 
-    # ---- Miniconda in /opt/miniconda3 -------------------------------------
-    wget -q https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/mc.sh
+    # ---- Miniforge in /opt/miniconda3 -------------------------------------
+    # Miniforge (community conda-forge installer): its base env is clean — no Anaconda
+    # 'defaults' channel and no conda-anaconda-tos package. This avoids both the defaults
+    # channel ToS gate and the base-env python 3.14 solver conflict that ships with the
+    # latest Miniconda.
+    wget -q https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh -O /tmp/mc.sh
     bash /tmp/mc.sh -b -p /opt/miniconda3 && rm /tmp/mc.sh
     export PATH=/opt/miniconda3/bin:$PATH
-    # use only conda-forge + bioconda (avoids Anaconda 'defaults' channel ToS gate)
-    conda config --remove channels defaults 2>/dev/null || true
     conda config --add channels bioconda
     conda config --add channels conda-forge
     conda config --set channel_priority strict
