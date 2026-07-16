@@ -4,8 +4,9 @@ use Getopt::Std;
 use Text::SimpleTable::AutoWidth;
 
 my(%opts);
-getopts("h", \%opts);
+getopts("hp", \%opts);
 if ($opts{h}) { help() };
+my $profile = $opts{p};   # profile mode: no binning -> drop Completeness/Redundancy/Bin/Scaffolds columns
 
 sub help{
 print STDERR "Usage: $0 [opts] \n\n";
@@ -72,40 +73,44 @@ open OUT, ">rapdtool_confidence.tbl";
 open OUT2, ">assemblyID_annot.txt";
 open OUT3, ">rapdtool_confidence.txt";
 
-my $g = Text::SimpleTable::AutoWidth->new( max_width => 5000, captions => [qw/ Genus-closest-hit Species-closest-hit taxID Genomic-distance Shared-hashes Completeness Redundancy Bin Scaffolds_in_Bin /] );
+my @gcap = qw/ Genus-closest-hit Species-closest-hit taxID Genomic-distance Shared-hashes /;
+push @gcap, qw/ Completeness Redundancy Bin Scaffolds_in_Bin / unless $profile;
+my $g = Text::SimpleTable::AutoWidth->new( max_width => 5000, captions => [@gcap] );
 
 if( %genus ){
 	$genus++;
 	print OUT"\nGenus with high confidence:\n\n";
 	print OUT3"# Genus with high confidence:\n\n";
-	print OUT3"Genus-closest-hit\tSpecies-closest-hit\ttaxID\tGenomic-distance\tShared-hashes\tCompleteness\tRedundancy\tBin\tScaffolds_in_Bin\n";
+	print OUT3 join("\t", @gcap)."\n";
 
 	foreach my $genu ( sort keys %genus ){
 		($wget,$taxid)= getseq($genu);
 		print OUT2 "$genu\t$wget\n";
 		(my $onlygenusname=$wget)=~ s/(\S+).*/$1/;
-		#~ unlink "/var/tmp/wget_genomes$genu.fna.gz";
-		#~ print "\t$genu $wget\t$genus{$genu}{dist}\t$genus{$genu}{frag}\n";  # with ncbi ids
-		print OUT3"$onlygenusname\t$wget\t$taxid\t$genus{$genu}{dist}\t$genus{$genu}{frag}\t$bin{$genus{$genu}{bin}}{Completeness}\t$bin{$genus{$genu}{bin}}{Redundancy}\t$genus{$genu}{bin}\t$bin{$genus{$genu}{bin}}{scaff}\n";
-		$g->row($onlygenusname,$wget,$taxid,$genus{$genu}{dist}, $genus{$genu}{frag}, $bin{$genus{$genu}{bin}}{Completeness}, $bin{$genus{$genu}{bin}}{Redundancy}, $genus{$genu}{bin}, $bin{$genus{$genu}{bin}}{scaff});
+		my @row = ($onlygenusname,$wget,$taxid,$genus{$genu}{dist},$genus{$genu}{frag});
+		push @row, ($bin{$genus{$genu}{bin}}{Completeness}, $bin{$genus{$genu}{bin}}{Redundancy}, $genus{$genu}{bin}, $bin{$genus{$genu}{bin}}{scaff}) unless $profile;
+		print OUT3 join("\t", @row)."\n";
+		$g->row(@row);
 	}
 }
 print OUT $g->draw if $genus;
 
-my $s = Text::SimpleTable::AutoWidth->new( max_width => 5000, captions => [qw/ Species taxID Genomic-distance Shared-hashes Completeness Redundancy Bin Scaffolds_in_Bin /] );
+my @scap = qw/ Species taxID Genomic-distance Shared-hashes /;
+push @scap, qw/ Completeness Redundancy Bin Scaffolds_in_Bin / unless $profile;
+my $s = Text::SimpleTable::AutoWidth->new( max_width => 5000, captions => [@scap] );
 
 if( %species ){
 	$species++;
 	print OUT"\nSpecies with high confidence:\n\n";
 	print OUT3"\n# Species with high confidence:\n\n";
+	print OUT3 join("\t", @scap)."\n";
 	foreach my $specie ( sort keys %species ){
 		($wget,$taxid)= getseq($specie);
 		print OUT2 "$specie\t$wget\n";
-		#~ unlink "/var/tmp/wget_genomes$specie.fna.gz";
-    	#~ print "\t$specie $wget\t$species{$specie}{dist}\t$species{$specie}{frag}\n";  # with ncbi ids
-    	print OUT3"Species\ttaxID\tGenomic-distance\tShared-hashes\tCompleteness\tRedundancy\tBin\tScaffolds_in_Bin\n";
-    	print OUT3"$wget\t$taxid\t$species{$specie}{dist}\t$species{$specie}{frag}\t$bin{$species{$specie}{bin}}{Completeness}\t$bin{$species{$specie}{bin}}{Redundancy}\t$species{$specie}{bin}\t$bin{$species{$specie}{bin}}{scaff}\n";
-    	$s->row($wget,$taxid,$species{$specie}{dist}, $species{$specie}{frag}, $bin{$species{$specie}{bin}}{Completeness}, $bin{$species{$specie}{bin}}{Redundancy}, $species{$specie}{bin}, $bin{$species{$specie}{bin}}{scaff});
+		my @row = ($wget,$taxid,$species{$specie}{dist},$species{$specie}{frag});
+		push @row, ($bin{$species{$specie}{bin}}{Completeness}, $bin{$species{$specie}{bin}}{Redundancy}, $species{$specie}{bin}, $bin{$species{$specie}{bin}}{scaff}) unless $profile;
+		print OUT3 join("\t", @row)."\n";
+		$s->row(@row);
     }
 }
 print OUT $s->draw if $species;

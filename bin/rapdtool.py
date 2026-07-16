@@ -444,7 +444,10 @@ class Pipeline:
     def merge_and_krona(self, index, total):
         print('Copying and merging results.. [%d/%d]' % (index, total))
         self.log('Copying and merging results..')
-        self.run('rapdtool_results', ['rapdtool_results.pl'], cwd=self.root)
+        merge_argv = ['rapdtool_results.pl']
+        if self.mode == 'profile':          # no binning -> drop completeness/bin columns
+            merge_argv.append('-p')
+        self.run('rapdtool_results', merge_argv, cwd=self.root)
         print('Generating Krona visualization.. [%d/%d]' % (index + 1, total))
         self.log('Generating Krona visualization..')
         self.run('krona', ['ktImportText', 'forkrona.txt'], cwd=self.root, allow_fail=True)
