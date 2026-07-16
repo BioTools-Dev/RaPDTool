@@ -45,11 +45,13 @@ while(<IN>){
 		my ($bin, $specie, $dist, $frag)= ($1, $2, $3, $4);
 		if( $dist < 0.05 ){
 			$species{$specie}{dist}= sprintf("%.3f", $dist);
+			$species{$specie}{ident}= sprintf("%.4f", 1 - $dist);
 			$species{$specie}{frag}= $frag;
 			$species{$specie}{bin}= $bin;
 			next;
         }elsif($dist < 0.08){
 			$genus{$specie}{dist}= sprintf("%.3f", $dist);
+			$genus{$specie}{ident}= sprintf("%.4f", 1 - $dist);
 			$genus{$specie}{frag}= $frag;
 			$genus{$specie}{bin}= $bin;
 			next;
@@ -73,7 +75,8 @@ open OUT, ">rapdtool_confidence.tbl";
 open OUT2, ">assemblyID_annot.txt";
 open OUT3, ">rapdtool_confidence.txt";
 
-my @gcap = qw/ Genus-closest-hit Species-closest-hit taxID Genomic-distance Shared-hashes /;
+my $distcap = $profile ? 'Identity' : 'Genomic-distance';   # profile: identity (1-dist), like screen
+my @gcap = ('Genus-closest-hit','Species-closest-hit','taxID',$distcap,'Shared-hashes');
 push @gcap, qw/ Completeness Redundancy Bin Scaffolds_in_Bin / unless $profile;
 my $g = Text::SimpleTable::AutoWidth->new( max_width => 5000, captions => [@gcap] );
 
@@ -87,7 +90,8 @@ if( %genus ){
 		($wget,$taxid)= getseq($genu);
 		print OUT2 "$genu\t$wget\n";
 		(my $onlygenusname=$wget)=~ s/(\S+).*/$1/;
-		my @row = ($onlygenusname,$wget,$taxid,$genus{$genu}{dist},$genus{$genu}{frag});
+		my $gval = $profile ? $genus{$genu}{ident} : $genus{$genu}{dist};
+		my @row = ($onlygenusname,$wget,$taxid,$gval,$genus{$genu}{frag});
 		push @row, ($bin{$genus{$genu}{bin}}{Completeness}, $bin{$genus{$genu}{bin}}{Redundancy}, $genus{$genu}{bin}, $bin{$genus{$genu}{bin}}{scaff}) unless $profile;
 		print OUT3 join("\t", @row)."\n";
 		$g->row(@row);
@@ -95,7 +99,7 @@ if( %genus ){
 }
 print OUT $g->draw if $genus;
 
-my @scap = qw/ Species taxID Genomic-distance Shared-hashes /;
+my @scap = ('Species','taxID',$distcap,'Shared-hashes');
 push @scap, qw/ Completeness Redundancy Bin Scaffolds_in_Bin / unless $profile;
 my $s = Text::SimpleTable::AutoWidth->new( max_width => 5000, captions => [@scap] );
 
@@ -107,7 +111,8 @@ if( %species ){
 	foreach my $specie ( sort keys %species ){
 		($wget,$taxid)= getseq($specie);
 		print OUT2 "$specie\t$wget\n";
-		my @row = ($wget,$taxid,$species{$specie}{dist},$species{$specie}{frag});
+		my $sval = $profile ? $species{$specie}{ident} : $species{$specie}{dist};
+		my @row = ($wget,$taxid,$sval,$species{$specie}{frag});
 		push @row, ($bin{$species{$specie}{bin}}{Completeness}, $bin{$species{$specie}{bin}}{Redundancy}, $species{$specie}{bin}, $bin{$species{$specie}{bin}}{scaff}) unless $profile;
 		print OUT3 join("\t", @row)."\n";
 		$s->row(@row);
