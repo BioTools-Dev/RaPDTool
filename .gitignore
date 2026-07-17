@@ -12,6 +12,11 @@ db/
 # Local dev scratch
 local/
 
+# Manual sources / working figures (only the built PDF + final figure are tracked)
+*.docx
+docs/*_new.png
+docs/*_new.svg
+
 # Python / editor cruft
 __pycache__/
 *.pyc
