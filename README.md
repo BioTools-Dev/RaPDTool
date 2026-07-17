@@ -233,5 +233,5 @@ Issues and pull requests are welcome on the [GitHub repository](https://github.c
 
 ## Acknowledgments
 
-We thank Dra. Luz Bretón Deval, Dr. Maikel G. Fernández-López and Ing. Roberto Peredo for his help in developing this tool.  
+We thank Ing. Roberto Peredo for his help in developing this tool.  
 Funded in part by project CF 2019 265222 (FORDECYT-PRONACES CONACYT-México).
