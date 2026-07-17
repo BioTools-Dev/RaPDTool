@@ -5,6 +5,12 @@
 
 ![RaPDTool pipeline](docs/RaPDTool_pipeline_newedit.png)
 
+<div align="center">
+
+📖 <strong><a href="docs/RaPDTool_Manual_v2.3.0_EN.pdf">Reference Manual (v2.3.0, PDF)</a></strong>
+
+</div>
+
 RaPDTool offers a simple, easy-to-use workflow for microbial-community profiling,
 contig binning and "genomic-distance" exploration by chaining several
 bioinformatic tools into a single pipeline:
@@ -193,7 +199,7 @@ simplifying interpretation and providing a basis for finer OGRI/ANI analysis.
 bin/            pipeline scripts (rapdtool.py, rapdtool_split_bins.py, rapdtool_results.pl)
 scripts/        rapdtool — host launcher (downloads/caches the image + databases, runs it)
 conda-recipe/   conda package recipe (meta.yaml, build.sh)
-docs/           figures
+docs/           figures and the reference manual (PDF)
 Singularity.def container build recipe
 CHANGELOG.md    version history
 ```
