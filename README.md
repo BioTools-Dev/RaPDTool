@@ -87,8 +87,23 @@ export RAPDTOOL_SIF=$PWD/rapdtool.sif
 Requirements: `apptainer` with working `--fakeroot` (or root), an internet connection, and
 ~5–6 GB of free disk during the build (final image ~0.5 GB). The build takes several
 minutes and self-checks its essential components, so it fails loudly rather than producing
-a broken image. Because it resolves current package versions, it is not bit-identical to
-the published image — verify a run afterwards.
+a broken image.
+
+> **Note on reproducibility.** The **distributed image** (figshare, fetched automatically)
+> is the frozen, version-controlled artifact intended for reproducible analyses. The recipe
+> above instead rebuilds from *currently available* package versions, so it is not
+> bit-identical to the distributed image. The recipe is verified to build and run correctly
+> as of the latest commit, and already carries the fixes needed for current dependency
+> versions — for example, patching miComplete for Biopython ≥1.80 (`Bio.SeqUtils.GC` →
+> `gc_fraction`), pinning `setuptools<81` so `focus_app` keeps `pkg_resources`, and using
+> Miniforge to avoid the Anaconda channel Terms-of-Service prompt. The pipeline pins its
+> core tools, but their transitive dependencies and the base installers are not fully
+> frozen: full pinning is itself fragile (older builds can become unsolvable over time, and
+> "latest" installers / base images move), and packages published to PyPI may occasionally
+> be withdrawn. As upstream libraries evolve, a fresh build may therefore need a small
+> additional fix. If you build from the recipe, **compare your results against the
+> distributed image** before relying on them, and please open an issue if a build breaks so
+> the recipe can be updated.
 
 </details>
 
