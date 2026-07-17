@@ -1,6 +1,6 @@
 <div align="center">
   <h1>$\huge \textcolor{red}{\textsf{R}}\textsf{a}\textcolor{red}{\textsf{P}}\textcolor{red}{\textsf{D}}\textcolor{red}{\textsf{T}}\textsf{ool}$</h1>
-  <h1>${{\color{red}Ra}pid\ {\color{red}P}rofiling\ and\ {\color{red}D}econvolution\ {\color{red}Tool}}\ for\ metagenomes$</h1>
+  <h1>${{\color{red}Ra}pid\ {\color{red}P}rofiling\ and\ {\color{red}D}econvolution\ {\color{red}Tool}}$</h1>
 </div>
 
 ![RaPDTool pipeline](docs/RaPDTool_pipeline_newedit.png)
