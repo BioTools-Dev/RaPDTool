@@ -47,6 +47,12 @@ From: ubuntu:22.04
     # python tools into the env
     $ENV/bin/pip install --no-cache-dir miComplete==1.1.1 Binning_refiner==1.4.3
 
+    # Patch miComplete for modern Biopython: Bio.SeqUtils.GC was removed in Biopython
+    # 1.80+ (this env has newer), replaced by gc_fraction. Without this, miComplete
+    # crashes on import and full mode leaves Completeness/Redundancy empty.
+    PSEQ=$(find $ENV/lib -path '*/micomplete/parseseqs.py' | head -1)
+    sed -i 's/from Bio.SeqUtils import GC/from Bio.SeqUtils import gc_fraction/; s/round(GC(/round(gc_fraction(/' "$PSEQ"
+
     # FOCUS ships a ~216 MB k-mer database (db/k6) inside its package; remove it
     # so it can be provided externally via --focus-db/$RTFOCUSDB.
     find $ENV -type d -path '*/focus_app/db' -exec rm -rf {} + 2>/dev/null || true
@@ -75,6 +81,9 @@ From: ubuntu:22.04
     for t in focus metabat2 mash miComplete Binning_refiner esearch; do
         command -v "$t" >/dev/null || { echo "BUILD ERROR: $t missing"; exit 1; }
     done
+    # miComplete/Binning_refiner must actually import & run (not just be on PATH)
+    miComplete --help >/dev/null 2>&1 || { echo 'BUILD ERROR: miComplete not runnable (Biopython GC/gc_fraction?)'; exit 1; }
+    Binning_refiner --help >/dev/null 2>&1 || { echo 'BUILD ERROR: Binning_refiner not runnable'; exit 1; }
 
     # ---- Slim the image (safe, runtime-only footprint) --------------------
     conda clean -a -y || true
