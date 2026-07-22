@@ -215,8 +215,8 @@ KronaTools · entrez-direct (used only when reporting Mash hits; requires intern
 
 ## References
 
-- Sánchez-Reyes, A.; Fernández-López, M.G. *Mash Sketched Reference Dataset for
-  Genome-Based Taxonomy and Comparative Genomics*. Preprints 2021, 2021060368.
+- Sánchez-Reyes A, Fernández-López MG. Sketched reference databases for genome-based taxonomy and comparative genomics.
+  Braz J Biol. 2022;84:e256673. https://doi.org/10.1590/1519-6984.256673.
 - Ondov BD *et al.* *Mash: fast genome and metagenome distance estimation using MinHash.*
   Genome Biol. 2016;17(1):132.
 - Silva GGZ *et al.* *FOCUS: an alignment-free model to identify organisms in
