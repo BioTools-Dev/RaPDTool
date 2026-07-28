@@ -2,6 +2,35 @@
 
 All notable changes to RaPDTool are documented here.
 
+## [2.3.1] — 2026-07-28
+
+### Fixed
+- **Documented input extensions now actually work.** FOCUS selects its inputs by file
+  suffix and reads only `.fna`/`.fasta`/`.fastq`, so inputs this tool documents as valid
+  — `.fa`, `.fas`, `.ffn`, `.frn`, `.fq`, and anything `.gz` — were silently ignored by
+  the profiling step. The working copy is now decompressed if needed and renamed to a
+  suffix FOCUS accepts. Output directories keep the name of the file the user supplied.
+- **Long names no longer wrap in `rapdtool_confidence.tbl`.** Table columns are sized to
+  their widest value instead of sharing a fixed width budget, so a long species name or
+  taxID stays on one line; only the scaffold list, reproduced in full in
+  `rapdtool_confidence.txt`, is narrowed to what is left.
+
+### Changed
+- **FOCUS reporting cutoff lowered from 1 % to 0.5 % relative abundance.** Set from the
+  threshold sweep of the RaPDTool benchmark: across mock communities at 3, 10 and 30 M
+  reads, 0.5 % recovers every species present (recall 1.0) against 0.80–0.95 at 1 %,
+  with F1 higher at 0.5 % at every depth tested. Affects only which rows are listed in
+  `rapdtool_confidence.tbl|txt`; the complete FOCUS profile under `profilesfmbm/` is
+  unfiltered as before, and Mash-based detection is unaffected.
+- The report merger uses `Text::SimpleTable` directly rather than
+  `Text::SimpleTable::AutoWidth`, dropping the Moo and Type::Tiny dependencies from the
+  image.
+
+### Documentation
+- Screen mode: `-i` takes a single file, so paired or multi-lane FASTQ must be
+  concatenated first (`cat R1.fastq R2.fastq > all.fastq`). Documented in the README,
+  the usage block and the launcher help.
+
 ## [2.3.0] — 2026-07-10
 
 ### Added
