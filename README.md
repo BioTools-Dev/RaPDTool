@@ -85,7 +85,7 @@ installs all tools; nothing but the recipe and the `bin/` scripts is needed. Run
 the cloned repository root (so the `%files` paths resolve):
 
 ```bash
-git clone https://github.com/kjestradag/RaPDTool.git
+git clone https://github.com/BioTools-Dev/RaPDTool.git
 cd RaPDTool
 apptainer build --fakeroot rapdtool.sif Singularity.def
 export RAPDTOOL_SIF=$PWD/rapdtool.sif
@@ -237,7 +237,7 @@ KronaTools · entrez-direct (used only when reporting Mash hits; requires intern
 RaPDTool was co-developed by **Dr. Ayixon Sánchez-Reyes** and **Dr. Karel Estrada** and is maintained by **Dr. Estrada**.  
 **Dr. Karel Estrada** ([@kjestradag](https://github.com/kjestradag) , karel.estrada@ibt.unam.mx) Unidad de Secuenciación Masiva y Bioinformática. UNAM.  
 **Dr. Ayixon Sánchez-Reyes** (ayixon@gmail.com , ayixon.sanchez@ibt.unam.mx) Researchers for Mexico Program (CONACYT), Institute of Biotechnology, UNAM.  
-Issues and pull requests are welcome on the [GitHub repository](https://github.com/kjestradag/RaPDTool).
+Issues and pull requests are welcome on the [GitHub repository](https://github.com/BioTools-Dev/RaPDTool).
 
 ## Acknowledgments
 
