@@ -2,7 +2,7 @@ Bootstrap: docker
 From: ubuntu:22.04
 
 # ============================================================================
-# RaPDTool v2.3.0 - Rapid Profiling and Deconvolution Tool for metagenomes
+# RaPDTool v2.3.1 - Rapid Profiling and Deconvolution Tool for metagenomes
 # ----------------------------------------------------------------------------
 # Reproducible build recipe. Build with:
 #     apptainer build --fakeroot rapdtool.sif Singularity.def
@@ -66,7 +66,9 @@ From: ubuntu:22.04
     # ---- Perl reporting module into the env's perl -----------------------
     # Not on conda; installed from CPAN via cpanm (needs 'make', installed above).
     # Version pinned for reproducibility. NO '|| true' here — a failure must abort.
-    $ENV/bin/cpanm --notest Text::SimpleTable::AutoWidth@0.09
+    # rapdtool_results.pl sizes its own columns since v2.3.1, so plain
+    # Text::SimpleTable suffices (::AutoWidth also pulled Moo and Type::Tiny).
+    $ENV/bin/cpanm --notest Text::SimpleTable@2.07
 
     chmod +x /usr/local/bin/rapdtool.py /usr/local/bin/rapdtool_split_bins.py \
              /usr/local/bin/rapdtool_results.pl
@@ -76,7 +78,7 @@ From: ubuntu:22.04
     #  ship a "successful" but broken image — missing Krona / Perl module / focus_app)
     export PATH=/opt/KronaTools/bin:$PATH   # KronaTools installs here (mirrors runtime %environment)
     command -v ktImportText >/dev/null || { echo 'BUILD ERROR: KronaTools (ktImportText) missing'; exit 1; }
-    $ENV/bin/perl -MText::SimpleTable::AutoWidth -e1 || { echo 'BUILD ERROR: Perl module Text::SimpleTable::AutoWidth missing'; exit 1; }
+    $ENV/bin/perl -MText::SimpleTable -e1 || { echo 'BUILD ERROR: Perl module Text::SimpleTable missing'; exit 1; }
     $ENV/bin/python -c 'import focus_app.focus' || { echo 'BUILD ERROR: focus_app import failed (pkg_resources?)'; exit 1; }
     for t in focus metabat2 mash miComplete Binning_refiner esearch; do
         command -v "$t" >/dev/null || { echo "BUILD ERROR: $t missing"; exit 1; }
@@ -120,11 +122,11 @@ From: ubuntu:22.04
 
 %labels
     Author Karel Estrada and Ayixon Sanchez-Reyes; pipeline maintained by the RaPDTool team
-    Version 2.3.0
+    Version 2.3.1
     Description RaPDTool metagenome profiling/binning/classification pipeline
 
 %help
-    RaPDTool v2.3.0
+    RaPDTool v2.3.1
     Usage inside the container:
         rapdtool.py -i assembly.fasta --focus-db $RTFOCUSDB [-d $RTMASHDB]
                     [-o out_dir] [-m full|profile|screen] [-t threads]

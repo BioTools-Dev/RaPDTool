@@ -28,7 +28,8 @@ bioinformatic tools into a single pipeline:
 
 - **Screen mode (v2.3.0)** – `-m screen` runs FOCUS + `mash screen` to report which
   reference genomes are present in a metagenome **without binning** (fast "what's there"),
-  accepting either a FASTA assembly or **raw FASTQ reads**.
+  accepting either a FASTA assembly or **raw FASTQ reads**. `-i` takes a single file:
+  concatenate paired or multi-lane FASTQ (`cat R1.fastq R2.fastq > all.fastq`) first.
 - **One-line conda install** – `conda create -n rapdtool -c conda-forge -c kjestradag rapdtool`
   sets everything up; the tested image and databases are fetched and cached automatically on first use.
 - **Robust error handling** – if any tool fails, the pipeline stops immediately with a
@@ -141,7 +142,8 @@ rapdtool -i INPUT [-o OUTPUT] [-m {full,profile,screen}] [-t THREADS] [-a COVERA
          [--screen-identity F] [--no-split-bins] [--force] [-c COMMENT]
 
   -i, --input      input FASTA assembly (.fasta/.fa/.fna/.fas, optionally .gz)   [required]
-                   (screen mode also accepts FASTQ reads: .fastq/.fq[.gz])
+                   (screen mode also accepts FASTQ reads: .fastq/.fq[.gz];
+                    one file only — cat paired/multi-lane FASTQ together first)
   -o, --output     output directory (default: ./rapdtool_results)
   -m, --mode       full (default): binning + per-bin taxonomic classification (MAGs);
                    profile: single-genome assembly (FOCUS + whole-assembly Mash);
@@ -166,6 +168,12 @@ rapdtool -i assembly.fasta -o results
 
 # Screen: which reference genomes are present in a metagenome (no binning)
 rapdtool -i assembly.fasta -m screen -o screen_out
+
+# Screen from raw reads. -i takes ONE file, so concatenate the runs first
+# (paired R1/R2, or several lanes) and pass the single result:
+cat reads_R1.fastq reads_R2.fastq > reads_all.fastq
+rapdtool -i reads_all.fastq -m screen -o screen_reads
+# gzipped reads concatenate the same way — cat R1.fastq.gz R2.fastq.gz > all.fastq.gz
 
 # Profile a single-genome assembly (FOCUS + whole-assembly Mash classification)
 rapdtool -i genome.fna -m profile -o prof_out

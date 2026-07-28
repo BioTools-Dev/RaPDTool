@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 use strict;
 use Getopt::Std;
-use Text::SimpleTable::AutoWidth;
+use Text::SimpleTable;
 
 my(%opts);
 getopts("hp", \%opts);
@@ -13,7 +13,7 @@ print STDERR "Usage: $0 [opts] \n\n";
 die <<'ayuda';
 -h       This help
 
--This program summarizes the best Focus and Mash hits in two files (rapdtool_confidence.tbl|txt). Uses a cutoff of 2 for the relative abundance of Focus results and a cutoff of 0.05 and 0.08 for species and genus taxas respectively of Mash results.
+-This program summarizes the best Focus and Mash hits in two files (rapdtool_confidence.tbl|txt). Uses a cutoff of 0.5 for the relative abundance of Focus results and a cutoff of 0.05 and 0.08 for species and genus taxas respectively of Mash results.
 
 Use output_Species_tabular.csv, found in "profilesfmbm" (Rapdtool output directory) and all '*.txt.out' from "allresultsfmbm" (Rapdtool output directory)
 
@@ -22,6 +22,39 @@ ayuda
 
 my (%focus, %species, %genus, $wget, %bin, $taxid);
 my ($genus, $species)= (0,0);
+
+# Minimum FOCUS relative abundance (%) shown in the report. Measured operating
+# point: at 0.5 the profile keeps every species of the benchmark communities with
+# no false positives at 10-30 M reads; at 1.0 species between 0.5 and 1 % are lost.
+my $FOCUS_MIN_ABUNDANCE = 0.5;
+
+# Overall width budget for the report tables, and the column that may absorb it.
+my $TABLE_MAX_WIDTH = 5000;
+my $WIDE_COLUMN     = 'Scaffolds_in_Bin';
+
+# Render a table whose columns are as wide as their widest value (caption
+# included), so a long species name or taxID is never wrapped onto a second line.
+# Only the scaffold list -- unbounded, and reproduced in full in
+# rapdtool_confidence.txt -- is narrowed, and only by what is left of the budget.
+sub draw_table {
+	my ($caps, $rows)= @_;
+	my @w= map { length } @$caps;
+	foreach my $row ( @$rows ){
+		foreach my $i ( 0 .. $#$row ){
+			my $len= length( defined $row->[$i] ? $row->[$i] : '' );
+			$w[$i]= $len if $len > $w[$i];
+		}
+	}
+	if( $caps->[-1] eq $WIDE_COLUMN ){
+		my $fixed= 0;
+		$fixed += $w[$_] foreach ( 0 .. $#w - 1 );
+		my $room= $TABLE_MAX_WIDTH - $fixed - 3 * scalar(@w);
+		$w[-1]= $room if $room > 20 && $w[-1] > $room;
+	}
+	my $t= Text::SimpleTable->new( map { [ $w[$_], $caps->[$_] ] } 0 .. $#w );
+	$t->row( map { defined $_ ? $_ : '' } @$_ ) foreach @$rows;
+	return $t->draw;
+}
 
 my $file_to_open= `find . -type f -name output_Species_tabular.csv`;
 open IN, $file_to_open or warn "Cant read $file_to_open\n";
@@ -78,7 +111,7 @@ open OUT3, ">rapdtool_confidence.txt";
 my $distcap = $profile ? 'Identity' : 'Genomic-distance';   # profile: identity (1-dist), like screen
 my @gcap = ('Genus-closest-hit','Species-closest-hit','taxID',$distcap,'Shared-hashes');
 push @gcap, qw/ Completeness Redundancy Bin Scaffolds_in_Bin / unless $profile;
-my $g = Text::SimpleTable::AutoWidth->new( max_width => 5000, captions => [@gcap] );
+my @grows;
 
 if( %genus ){
 	$genus++;
@@ -94,14 +127,14 @@ if( %genus ){
 		my @row = ($onlygenusname,$wget,$taxid,$gval,$genus{$genu}{frag});
 		push @row, ($bin{$genus{$genu}{bin}}{Completeness}, $bin{$genus{$genu}{bin}}{Redundancy}, $genus{$genu}{bin}, $bin{$genus{$genu}{bin}}{scaff}) unless $profile;
 		print OUT3 join("\t", @row)."\n";
-		$g->row(@row);
+		push @grows, [@row];
 	}
 }
-print OUT $g->draw if $genus;
+print OUT draw_table(\@gcap, \@grows) if $genus;
 
 my @scap = ('Species','taxID',$distcap,'Shared-hashes');
 push @scap, qw/ Completeness Redundancy Bin Scaffolds_in_Bin / unless $profile;
-my $s = Text::SimpleTable::AutoWidth->new( max_width => 5000, captions => [@scap] );
+my @srows;
 
 if( %species ){
 	$species++;
@@ -115,15 +148,16 @@ if( %species ){
 		my @row = ($wget,$taxid,$sval,$species{$specie}{frag});
 		push @row, ($bin{$species{$specie}{bin}}{Completeness}, $bin{$species{$specie}{bin}}{Redundancy}, $species{$specie}{bin}, $bin{$species{$specie}{bin}}{scaff}) unless $profile;
 		print OUT3 join("\t", @row)."\n";
-		$s->row(@row);
+		push @srows, [@row];
     }
 }
-print OUT $s->draw if $species;
+print OUT draw_table(\@scap, \@srows) if $species;
 
 # mash screen section (screen mode) - reads mashscreen_hits.txt if present
 if( -s "mashscreen_hits.txt" ){
 	open SC, "mashscreen_hits.txt";
-	my $sc = Text::SimpleTable::AutoWidth->new( max_width => 5000, captions => [qw/ Species taxID Identity Shared-hashes /] );
+	my @sccap= qw/ Species taxID Identity Shared-hashes /;
+	my @scrows;
 	print OUT"\nReference genomes detected (mash screen):\n\n";
 	print OUT3"\n# Reference genomes detected (mash screen):\n\n";
 	print OUT3"Species\ttaxID\tIdentity\tShared-hashes\n";
@@ -134,20 +168,22 @@ if( -s "mashscreen_hits.txt" ){
 		my($org,$taxid)= getseq($acc);
 		print OUT2"$acc\t$org\n";
 		print OUT3"$org\t$taxid\t$ident\t$shared\n";
-		$sc->row($org,$taxid,$ident,$shared);
+		push @scrows, [$org,$taxid,$ident,$shared];
 	}
 	close SC;
-	print OUT $sc->draw;
+	print OUT draw_table(\@sccap, \@scrows);
 }
 
-my $f = Text::SimpleTable::AutoWidth->new( max_width => 100, captions => [qw/ Species relative_abundance /] );
+my @fcap= qw/ Species relative_abundance /;
+my @frows;
 print OUT"\n\nFOCUS profile\nBe cautious at species taxonomic level:\n";
 print OUT3"\n# FOCUS profile (be cautious at species taxonomic level):\n\n";
 foreach my $specie ( sort {$focus{$b}<=>$focus{$a}} keys %focus ){
-	print OUT3"$specie\t$focus{$specie}\n" if $focus{$specie} > 1;
-	$f->row($specie,$focus{$specie}) if $focus{$specie} > 1;
+	next unless $focus{$specie} >= $FOCUS_MIN_ABUNDANCE;
+	print OUT3"$specie\t$focus{$specie}\n";
+	push @frows, [$specie,$focus{$specie}];
 }
-print OUT $f->draw;
+print OUT draw_table(\@fcap, \@frows);
 
 open OUT3, ">forkrona.txt";
 my $file_to_open4= `>profilesfmbm.txt; find profilesfmbm -type f -name 'output_All_levels.csv' -exec cat {} >>profilesfmbm.txt ';' 2>/dev/null; echo "profilesfmbm.txt"`;

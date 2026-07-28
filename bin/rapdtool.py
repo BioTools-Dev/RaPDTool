@@ -19,12 +19,18 @@ import subprocess
 import sys
 import time
 
-VERSION = '2.3.0'
+VERSION = '2.3.1'
 
 # accepted input extensions (optionally followed by .gz)
 FASTA_EXTS = ('.fasta', '.fa', '.fna', '.fas', '.ffn', '.frn')
 FASTQ_EXTS = ('.fastq', '.fq')          # raw reads, accepted in screen mode only
 INPUT_EXTS = FASTA_EXTS + FASTQ_EXTS
+
+# FOCUS selects its inputs by file suffix and reads only these three, so the
+# working copy is renamed to one of them (and decompressed if needed) before
+# FOCUS is invoked. Without this, an input this tool documents as valid -- .fa,
+# .fas, .fq, or anything .gz -- is silently ignored by FOCUS.
+FOCUS_EXTS = ('.fna', '.fasta', '.fastq')
 
 
 def eprint(*args):
@@ -117,6 +123,24 @@ class Pipeline:
             if rmp >= 0:
                 name = name[:rmp]
         return name.replace('.', '_')
+
+    @classmethod
+    def focus_name(cls, filename, fastq=False):
+        """Name the working copy so FOCUS accepts it: strip .gz, replace a known
+        extension with .fasta (or .fastq for reads), leave .fna/.fasta/.fastq as
+        they are. Only the copy is renamed -- every output path keeps the name
+        the user gave."""
+        name = filename
+        if name.lower().endswith('.gz'):
+            name = name[:-3]
+        low = name.lower()
+        if low.endswith(FOCUS_EXTS):
+            return name
+        for ext in INPUT_EXTS:
+            if low.endswith(ext):
+                name = name[:-len(ext)]
+                break
+        return name + ('.fastq' if fastq else '.fasta')
 
     def _first_char(self, path):
         try:
@@ -213,15 +237,20 @@ class Pipeline:
         opt = self.opts.input
         if not os.path.isfile(opt):
             self.fail('input', 'input file not found: ' + opt)
+        fastq = False
         if self.mode == 'screen':
-            if not (self.is_fasta(opt) or self.is_fastq(opt)):
+            fastq = self.is_fastq(opt)
+            if not (self.is_fasta(opt) or fastq):
                 self.fail('input', 'not a FASTA/FASTQ file (must start with ">" or "@"): ' + opt)
         elif not self.is_fasta(opt):
             self.fail('input', 'not a FASTA assembly (must start with ">"). Raw reads '
                       '(FASTQ) are supported only in screen mode (-m screen): ' + opt)
         filename = os.path.basename(opt)
-        target = self.paths['input'] + filename
-        if os.path.abspath(opt) != target:
+        target = self.paths['input'] + self.focus_name(filename, fastq)
+        if opt.lower().endswith('.gz'):
+            with self.open_maybe_gz(opt) as src, open(target, 'w') as dst:
+                shutil.copyfileobj(src, dst)
+        elif os.path.abspath(opt) != os.path.abspath(target):
             shutil.copy(opt, target)
         bluntname = self.blunt_name(filename)
 
@@ -537,8 +566,10 @@ def pick_options(argv=None):
         description='RaPDTool v%s - Focus/Metabat/Binning_refiner/miComplete/Mash '
                     'metagenome pipeline' % VERSION)
     parser.add_argument('-i', '--input', required=True,
-                        help='input FASTA assembly (.fasta/.fa/.fna/.fas, optionally .gz); '
-                             'FASTQ reads (.fastq/.fq) are also accepted in screen mode')
+                        help='input FASTA assembly (.fasta/.fa/.fna/.fas/.ffn/.frn, optionally '
+                             '.gz); FASTQ reads (.fastq/.fq[.gz]) are also accepted in screen '
+                             'mode. Compressed or non-canonical extensions are normalised '
+                             'internally, so any of these works')
     parser.add_argument('-d', '--database', default=os.environ.get('RTMASHDB'),
                         help='mash database (.msh). Default: $RTMASHDB. Not needed in profile mode.')
     parser.add_argument('--focus-db', dest='focus_db', default=os.environ.get('RTFOCUSDB'),

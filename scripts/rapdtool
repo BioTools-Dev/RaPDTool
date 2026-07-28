@@ -16,7 +16,7 @@
 
 set -eu
 
-RAPDTOOL_VERSION=2.3.0
+RAPDTOOL_VERSION=2.3.1
 
 CACHE="${RAPDTOOL_CACHE:-${XDG_CACHE_HOME:-$HOME/.cache}/rapdtool}"
 
@@ -144,7 +144,8 @@ Usage:
            [--screen-identity F] [--no-split-bins] [--force] [-c COMMENT]
 
   -i, --input      input FASTA assembly (.fasta/.fa/.fna/.fas, optionally .gz)   [required]
-                   (screen mode also accepts FASTQ reads: .fastq/.fq[.gz])
+                   (screen mode also accepts FASTQ reads: .fastq/.fq[.gz];
+                    one file only — cat paired/multi-lane FASTQ together first)
   -o, --output     output directory (default: ./rapdtool_results)
   -m, --mode       full (default): binning + per-bin classification;
                    profile: single genome (FOCUS + whole-assembly Mash);
