@@ -17,6 +17,11 @@ local/
 # until it was removed from the history.
 _archive/
 
+# examples/ ships the two input files and nothing else. A run's output directory is
+# reproducible from them, and the per-bin mash reports inside one are ~140 MB of
+# intermediates that no reader opens.
+examples/*/
+
 # Manual sources / working figures (only the built PDF + final figure are tracked)
 *.docx
 docs/*_new.png
