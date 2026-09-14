@@ -12,6 +12,11 @@ db/
 # Local dev scratch
 local/
 
+# Old build sandboxes and superseded experiments kept only on disk. This tree was
+# swept into the repo by a broad 'git add -A' and carried 2.7 GB in 59,765 files
+# until it was removed from the history.
+_archive/
+
 # Manual sources / working figures (only the built PDF + final figure are tracked)
 *.docx
 docs/*_new.png
