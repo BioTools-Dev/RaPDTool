@@ -212,6 +212,10 @@ class Pipeline:
             needed = list(p.keys())
         else:
             needed = ['log', 'input', 'profiles', 'processed', 'logfocus', 'work']
+        if self.mode == 'profile':
+            # profile scores the whole assembly as its single bin, so it needs the
+            # same miComplete paths full mode uses
+            needed += ['inmicomplete', 'outmicomplete', 'micompleteres']
 
         self.log_file = p['log'] + 'logfmbm.txt'
         for key in needed:
@@ -314,6 +318,9 @@ class Pipeline:
             self.binref_log = p['logbinningref'] + self.filename + '.txt'
             self.micomplete_in = p['inmicomplete'] + b + '.tab'
             self.micomplete_out = p['outmicomplete'] + 'miCompleteOut_' + b + '.tab'
+        elif self.mode == 'profile':
+            self.micomplete_in = p['inmicomplete'] + b + '.tab'
+            self.micomplete_out = p['outmicomplete'] + 'miCompleteOut_' + b + '.tab'
 
         dirs = [self.focus_out, self.result_path]
         if self.mode == 'full':
@@ -377,10 +384,15 @@ class Pipeline:
         self.refined_bins = os.listdir(self.binref_refbins)
         self.log('Binning_refiner - %d refined bin(s)' % len(self.refined_bins))
 
-    def step_micomplete(self, index, total):
+    def step_micomplete(self, index, total, fastas=None):
+        """Score the FASTA set given, defaulting to the refined bins of full mode.
+        Profile mode passes the whole assembly instead: that is the single bin it
+        classifies, so both modes report completeness and redundancy for whatever
+        they named."""
         print('Running miComplete.. [%d/%d]' % (index, total))
         self.log('miComplete command')
-        fna = sorted(self.binref_refbins + n for n in self.refined_bins if n.endswith('.fna'))
+        fna = fastas if fastas is not None else sorted(
+            self.binref_refbins + n for n in self.refined_bins if n.endswith('.fna'))
         self.run('miCompletelist', ['miCompletelist.sh'],
                  stdin_data='\n'.join(fna) + '\n', stdout_path=self.micomplete_in)
         self.run('miComplete',
@@ -421,6 +433,31 @@ class Pipeline:
         reports = os.listdir(self.mash_out)
         self.log('mash - %d taxonomic match report(s)' % len(reports))
         self._extract_min_dist(reports)
+
+    def step_micomplete_profile(self, index, total):
+        """Profile mode has no bins, so the assembly itself is scored. mash was run on
+        a '<bluntname>.fna' view of the input so the report parser reads that name;
+        miComplete is given the same view, so its Name column keys to the same bin and
+        the merger can join completeness and redundancy onto the classified rows.
+
+        The view has to be a HARD link, not a symlink: miCompletelist.sh resolves its
+        input with 'readlink -e', and miComplete then names the genome by joining the
+        dot-separated parts of that basename with the dots dropped. Resolved back to
+        the original filename, 'GCF_000393015.1_x.fna' would be reported as
+        'GCF_0003930151_x' and would key to no bin at all, leaving the two new columns
+        silently empty."""
+        query = self.paths['work'] + self.bluntname + '.fna'
+        made = not os.path.lexists(query)
+        if made:
+            try:
+                os.link(self.input_file, query)
+            except OSError:                      # different filesystem
+                shutil.copy(self.input_file, query)
+        try:
+            self.step_micomplete(index, total, fastas=[query])
+        finally:
+            if made and os.path.lexists(query):
+                os.remove(query)
 
     def step_mash_screen(self, index, total):
         """Screen mode: identify reference genomes contained in the whole assembly
@@ -468,6 +505,23 @@ class Pipeline:
                     ghits.append(row)
             hits.sort()                              # nearest first
             ghits.sort()
+        # The containment table is the evidence behind both tiers, so it is published
+        # beside the report rather than left inside workfmbm/. mash screen emits hits
+        # in no useful order; sorting on the identity column puts the best first.
+        if os.path.isfile(raw):
+            ranked = []
+            for line in open(raw):
+                f = line.split('\t')
+                if len(f) < 5:
+                    continue
+                try:
+                    ranked.append((float(f[0]), line))
+                except ValueError:
+                    continue
+            ranked.sort(key=lambda r: r[0], reverse=True)
+            with open(self.root + 'rapdtool_mashscreen.tab', 'w') as fh:
+                for _, line in ranked:
+                    fh.write(line if line.endswith('\n') else line + '\n')
         for name, rows in (('mashscreen_hits.txt', hits),
                            ('mashscreen_genus_hits.txt', ghits)):
             with open(self.root + name, 'w') as fh:
@@ -571,11 +625,14 @@ class Pipeline:
 
         if self.mode == 'profile':
             run_mash = self.database is not None
-            total = 4 if run_mash else 3
+            # miComplete only earns its cost when there are classified rows to hang
+            # completeness on, and those come from mash
+            total = 5 if run_mash else 3
             step = 1
             self.step_focus(step, total); step += 1
             if run_mash:
                 self.step_mash_profile(step, total); step += 1
+                self.step_micomplete_profile(step, total); step += 1
             shutil.move(self.input_file, self.paths['processed'] + self.filename)
             self.merge_and_krona(step, total)
             self.cleanup()

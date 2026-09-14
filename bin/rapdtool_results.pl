@@ -6,7 +6,9 @@ use Text::SimpleTable;
 my(%opts);
 getopts("hp", \%opts);
 if ($opts{h}) { help() };
-my $profile = $opts{p};   # profile mode: no binning -> drop Completeness/Redundancy/Bin/Scaffolds columns
+my $profile = $opts{p};   # profile mode: the whole assembly is the single bin, so it
+                          # keeps Completeness/Redundancy and drops only the two
+                          # columns binning gives meaning to: Bin and Scaffolds_in_Bin
 
 sub help{
 print STDERR "Usage: $0 [opts] \n\n";
@@ -117,7 +119,8 @@ while(<IN>){
 	my($bin, $Completeness, $Redundancy)= (split)[0,4,5];
 	$bin{$bin}{Completeness}= $Completeness;
 	$bin{$bin}{Redundancy}= $Redundancy;
-	$bin{$bin}{scaff} = `find . -type f -name '$bin.fna' -exec sh -c "grep '^>' {} | tr -d '>' | tr '\n' ',' | sed 's/.\$//'" ';'`;
+	$bin{$bin}{scaff} = $profile ? '' :
+		`find . -type f -name '$bin.fna' -exec sh -c "grep '^>' {} | tr -d '>' | tr '\n' ',' | sed 's/.\$//'" ';'`;
 }
 
 unlink "allmash.txt","miCompleteOut.txt";
@@ -126,8 +129,9 @@ open OUT2, ">assemblyID_annot.txt";
 open OUT3, ">rapdtool_confidence.txt";
 
 my $distcap = $profile ? 'ANI-est' : 'Genomic-distance';   # profile: corrected ANI, like screen
-my @gcap = ('Genus-closest-hit','Species-closest-hit','taxID',$distcap,'Shared-hashes');
-push @gcap, qw/ Completeness Redundancy Bin Scaffolds_in_Bin / unless $profile;
+my @gcap = ('Genus-closest-hit','Species-closest-hit','taxID',$distcap,'Shared-hashes',
+            'Completeness','Redundancy');
+push @gcap, qw/ Bin Scaffolds_in_Bin / unless $profile;
 my @grows;
 
 if( %genus ){
@@ -141,16 +145,17 @@ if( %genus ){
 		print OUT2 "$genu\t$wget\n";
 		(my $onlygenusname=$wget)=~ s/(\S+).*/$1/;
 		my $gval = $profile ? $genus{$genu}{ident} : $genus{$genu}{dist};
-		my @row = ($onlygenusname,$wget,$taxid,$gval,$genus{$genu}{frag});
-		push @row, ($bin{$genus{$genu}{bin}}{Completeness}, $bin{$genus{$genu}{bin}}{Redundancy}, $genus{$genu}{bin}, $bin{$genus{$genu}{bin}}{scaff}) unless $profile;
+		my @row = ($onlygenusname,$wget,$taxid,$gval,$genus{$genu}{frag},
+		           $bin{$genus{$genu}{bin}}{Completeness}, $bin{$genus{$genu}{bin}}{Redundancy});
+		push @row, ($genus{$genu}{bin}, $bin{$genus{$genu}{bin}}{scaff}) unless $profile;
 		print OUT3 join("\t", @row)."\n";
 		push @grows, [@row];
 	}
 }
 print OUT draw_table(\@gcap, \@grows) if $genus;
 
-my @scap = ('Species','taxID',$distcap,'Shared-hashes');
-push @scap, qw/ Completeness Redundancy Bin Scaffolds_in_Bin / unless $profile;
+my @scap = ('Species','taxID',$distcap,'Shared-hashes','Completeness','Redundancy');
+push @scap, qw/ Bin Scaffolds_in_Bin / unless $profile;
 my @srows;
 
 if( %species ){
@@ -162,8 +167,9 @@ if( %species ){
 		($wget,$taxid)= getseq($specie);
 		print OUT2 "$specie\t$wget\n";
 		my $sval = $profile ? $species{$specie}{ident} : $species{$specie}{dist};
-		my @row = ($wget,$taxid,$sval,$species{$specie}{frag});
-		push @row, ($bin{$species{$specie}{bin}}{Completeness}, $bin{$species{$specie}{bin}}{Redundancy}, $species{$specie}{bin}, $bin{$species{$specie}{bin}}{scaff}) unless $profile;
+		my @row = ($wget,$taxid,$sval,$species{$specie}{frag},
+		           $bin{$species{$specie}{bin}}{Completeness}, $bin{$species{$specie}{bin}}{Redundancy});
+		push @row, ($species{$specie}{bin}, $bin{$species{$specie}{bin}}{scaff}) unless $profile;
 		print OUT3 join("\t", @row)."\n";
 		push @srows, [@row];
     }

@@ -198,6 +198,7 @@ Results are written under the `-o` directory (default `rapdtool_results`):
 - `workfmbm/` – intermediate binning / distance data
 - `species_bins/` – one FASTA per identified species (full mode)
 - `rapdtool_confidence.tbl` / `.txt` – merged high-confidence Species/Genus report
+- `rapdtool_mashscreen.tab` – the raw `mash screen` containment table, best hit first (screen mode)
 - `rapdtool_krona.html` – interactive Krona visualization
 - `log/logfmbm.txt` – full execution log
 
